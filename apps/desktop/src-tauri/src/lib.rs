@@ -17,9 +17,7 @@ pub fn run() {
                 .expect("app data dir")
                 .join("downloads");
             let handle = app.handle().clone();
-            tauri::async_runtime::block_on(async move {
-                downloads::init(&handle, dir).await
-            })?;
+            tauri::async_runtime::block_on(async move { downloads::init(&handle, dir).await })?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

@@ -68,7 +68,10 @@ pub async fn download_list(state: State<'_, Downloads>) -> Result<Vec<Progress>,
 
 /// Absolute path of a finished download, or null. The frontend turns it into an asset:// URL.
 #[tauri::command]
-pub async fn download_local_path(state: State<'_, Downloads>, id: String) -> Result<Option<String>, String> {
+pub async fn download_local_path(
+    state: State<'_, Downloads>,
+    id: String,
+) -> Result<Option<String>, String> {
     Ok(state
         .0
         .local_path(&id)
