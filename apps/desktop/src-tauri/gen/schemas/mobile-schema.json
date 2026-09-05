@@ -2509,6 +2509,48 @@
           "type": "string",
           "const": "os:deny-version",
           "markdownDescription": "Denies the version command without any pre-configured scope."
+        },
+        {
+          "description": "Allows the app to control screen orientation, system bar insets and immersive mode.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`",
+          "type": "string",
+          "const": "plaguex-android:default",
+          "markdownDescription": "Allows the app to control screen orientation, system bar insets and immersive mode.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`"
+        },
+        {
+          "description": "Enables the set_fit_system_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "plaguex-android:allow-set-fit-system-windows",
+          "markdownDescription": "Enables the set_fit_system_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_immersive command without any pre-configured scope.",
+          "type": "string",
+          "const": "plaguex-android:allow-set-immersive",
+          "markdownDescription": "Enables the set_immersive command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_orientation command without any pre-configured scope.",
+          "type": "string",
+          "const": "plaguex-android:allow-set-orientation",
+          "markdownDescription": "Enables the set_orientation command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_fit_system_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "plaguex-android:deny-set-fit-system-windows",
+          "markdownDescription": "Denies the set_fit_system_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_immersive command without any pre-configured scope.",
+          "type": "string",
+          "const": "plaguex-android:deny-set-immersive",
+          "markdownDescription": "Denies the set_immersive command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_orientation command without any pre-configured scope.",
+          "type": "string",
+          "const": "plaguex-android:deny-set-orientation",
+          "markdownDescription": "Denies the set_orientation command without any pre-configured scope."
         }
       ]
     },

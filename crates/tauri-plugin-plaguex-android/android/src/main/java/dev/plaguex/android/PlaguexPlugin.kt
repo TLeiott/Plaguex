@@ -3,6 +3,7 @@ package dev.plaguex.android
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.graphics.Color
+import android.view.View
 import android.webkit.WebView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -34,13 +35,16 @@ class EnabledArgs {
 @TauriPlugin
 class PlaguexPlugin(private val activity: Activity) : Plugin(activity) {
     private var webView: WebView? = null
+    private var insetTarget: View? = null
     private var fitSystemWindows = true
     private val background = Color.parseColor("#0B0B0F")
 
     override fun load(webView: WebView) {
         super.load(webView)
         this.webView = webView
-        activity.runOnUiThread {
+        // A WebView ignores its own padding for web content, so pad the container it lives in.
+        // The parent only exists once the view is attached, hence the post().
+        webView.post {
             val window = activity.window
             WindowCompat.setDecorFitsSystemWindows(window, false)
             window.decorView.setBackgroundColor(background)
@@ -49,7 +53,10 @@ class PlaguexPlugin(private val activity: Activity) : Plugin(activity) {
                 isAppearanceLightStatusBars = false
                 isAppearanceLightNavigationBars = false
             }
-            ViewCompat.setOnApplyWindowInsetsListener(webView) { view, insets ->
+            val target: View = (webView.parent as? View) ?: webView
+            target.setBackgroundColor(background)
+            insetTarget = target
+            ViewCompat.setOnApplyWindowInsetsListener(target) { view, insets ->
                 val bars = insets.getInsets(
                     WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
                 )
@@ -60,7 +67,7 @@ class PlaguexPlugin(private val activity: Activity) : Plugin(activity) {
                 }
                 WindowInsetsCompat.CONSUMED
             }
-            ViewCompat.requestApplyInsets(webView)
+            ViewCompat.requestApplyInsets(target)
         }
     }
 
@@ -98,7 +105,7 @@ class PlaguexPlugin(private val activity: Activity) : Plugin(activity) {
     fun setFitSystemWindows(invoke: Invoke) {
         val args = invoke.parseArgs(EnabledArgs::class.java)
         fitSystemWindows = args.enabled
-        activity.runOnUiThread { webView?.let { ViewCompat.requestApplyInsets(it) } }
+        activity.runOnUiThread { (insetTarget ?: webView)?.let { ViewCompat.requestApplyInsets(it) } }
         invoke.resolve()
     }
 }
