@@ -72,8 +72,10 @@ function DiagnosticsPage() {
         <h1 className="text-2xl font-bold tracking-tight">Diagnostics &amp; benchmark</h1>
         <p className="mt-1 text-sm text-fg-2">
           Checks plex.tv, every server connection, library and image loading, downloads and the
-          local file server, then plays a downloaded file and a stream for 15 seconds each while
-          counting stalls and dropped frames. Nothing is uploaded; you decide where the report goes.
+          local file server, then plays a downloaded file and a stream full-screen for 15 seconds
+          each while measuring stalls, dropped frames and frame pacing. Keep the screen on and
+          watch: what stutters for you shows up as hitches in the report. Nothing is uploaded; you
+          decide where the report goes.
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -161,6 +163,14 @@ function DiagnosticsPage() {
                 <dd>{p.decoded}</dd>
                 <dt>Min buffer ahead</dt>
                 <dd>{p.minBufferAheadSecs.toFixed(1)} s</dd>
+                <dt>Frame hitches</dt>
+                <dd>
+                  {p.hitches} / {p.presentedFrames} (worst {p.worstFrameGapMs} ms)
+                </dd>
+                <dt>Main-thread jank</dt>
+                <dd>
+                  {p.longFrames} (worst {p.worstLongFrameMs} ms)
+                </dd>
               </dl>
               {p.error ? <p className="mt-2 text-danger">{p.error}</p> : null}
             </div>

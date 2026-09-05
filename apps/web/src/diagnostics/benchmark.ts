@@ -27,6 +27,16 @@ export interface PlaybackProbe {
   totalFrames: number
   decoded: string
   minBufferAheadSecs: number
+  /** Presented frames observed via requestVideoFrameCallback. */
+  presentedFrames: number
+  /** Median gap between presented frames, ms (≈ 1000 / fps when smooth). */
+  medianFrameGapMs: number
+  /** Presented-frame gaps > 1.5× the median: visible hitches/jumps. */
+  hitches: number
+  worstFrameGapMs: number
+  /** Main-thread rAF gaps > 50 ms (UI jank that also delays compositing). */
+  longFrames: number
+  worstLongFrameMs: number
   error: string | null
 }
 
@@ -72,9 +82,61 @@ const timed = async (
   }
 }
 
+/** Frame-pacing observer: presented-frame gaps (rVFC) and main-thread jank (rAF). */
+function observePacing(el: HTMLVideoElement) {
+  const gaps: number[] = []
+  let longFrames = 0
+  let worstLong = 0
+  let lastPresented: number | null = null
+  let lastRaf: number | null = null
+  let stopped = false
+  const rvfc = (
+    el as HTMLVideoElement & {
+      requestVideoFrameCallback?: (
+        cb: (now: number, meta: { presentedFrames: number }) => void,
+      ) => void
+    }
+  ).requestVideoFrameCallback?.bind(el)
+  const onFrame = (now: number) => {
+    if (stopped) return
+    if (lastPresented !== null) gaps.push(now - lastPresented)
+    lastPresented = now
+    rvfc?.(onFrame)
+  }
+  const onRaf = (now: number) => {
+    if (stopped) return
+    if (lastRaf !== null && now - lastRaf > 50) {
+      longFrames++
+      worstLong = Math.max(worstLong, now - lastRaf)
+    }
+    lastRaf = now
+    requestAnimationFrame(onRaf)
+  }
+  rvfc?.(onFrame)
+  requestAnimationFrame(onRaf)
+  return {
+    stop() {
+      stopped = true
+      const sorted = [...gaps].sort((a, b) => a - b)
+      const median = sorted.length ? sorted[Math.floor(sorted.length / 2)]! : 0
+      // Anything past 1.5 frame intervals means at least one vsync showed a stale frame.
+      const hitches = median ? gaps.filter((g) => g > median * 1.5).length : 0
+      return {
+        presentedFrames: gaps.length + (lastPresented === null ? 0 : 1),
+        medianFrameGapMs: Math.round(median * 10) / 10,
+        hitches,
+        worstFrameGapMs: Math.round(sorted.at(-1) ?? 0),
+        longFrames,
+        worstLongFrameMs: Math.round(worstLong),
+      }
+    },
+  }
+}
+
 /**
- * Plays `url` muted in a detached <video> for `seconds` and measures start-up, stalls and frame
- * drops. Uses the real media pipeline of the runtime, so results reflect what the player sees.
+ * Plays `url` for `seconds` in a full-screen, visible <video> (immersive on Android, like the real
+ * player) and measures start-up, stalls, dropped frames and frame pacing. Rendering on screen
+ * matters: an off-screen 320px element never exercises the compositor and hides real stutter.
  */
 export async function probePlayback(
   label: string,
@@ -83,13 +145,22 @@ export async function probePlayback(
   seconds: number,
   onProgress?: Progress,
 ): Promise<PlaybackProbe> {
+  const native = platform().screen
+  const host = document.createElement('div')
+  host.dataset.testid = 'probe-stage'
+  host.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#000'
   const el = document.createElement('video')
   el.muted = true
   el.playsInline = true
   el.preload = 'auto'
-  el.style.cssText =
-    'position:fixed;left:-9999px;top:0;width:320px;height:180px;opacity:0.01;pointer-events:none'
-  document.body.appendChild(el)
+  el.style.cssText = 'width:100%;height:100%;object-fit:contain'
+  const hud = document.createElement('div')
+  hud.style.cssText =
+    'position:absolute;left:12px;top:12px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,.6);color:#fff;font:12px ui-monospace,monospace;white-space:pre;pointer-events:none'
+  hud.textContent = `${label}\nstarting…`
+  host.append(el, hud)
+  document.body.appendChild(host)
+  await native?.setImmersive(true).catch(() => undefined)
   const probe: PlaybackProbe = {
     label,
     source,
@@ -102,10 +173,17 @@ export async function probePlayback(
     totalFrames: 0,
     decoded: '',
     minBufferAheadSecs: Infinity,
+    presentedFrames: 0,
+    medianFrameGapMs: 0,
+    hitches: 0,
+    worstFrameGapMs: 0,
+    longFrames: 0,
+    worstLongFrameMs: 0,
     error: null,
   }
   const t0 = performance.now()
   let stallStart: number | null = null
+  let pacing: ReturnType<typeof observePacing> | undefined
   let hls: { destroy(): void } | null = null
   const onWaiting = () => {
     probe.stalls++
@@ -147,6 +225,7 @@ export async function probePlayback(
       el.src = url
     }
     await Promise.race([el.play(), errored])
+    pacing = observePacing(el)
     const deadline = performance.now() + seconds * 1000
     while (performance.now() < deadline) {
       await Promise.race([new Promise((r) => setTimeout(r, 500)), errored])
@@ -154,7 +233,10 @@ export async function probePlayback(
         ? el.buffered.end(el.buffered.length - 1) - el.currentTime
         : 0
       probe.minBufferAheadSecs = Math.min(probe.minBufferAheadSecs, ahead)
-      onProgress?.(`${label}: ${el.currentTime.toFixed(1)} s played, ${probe.stalls} stalls`)
+      const q = el.getVideoPlaybackQuality?.()
+      const msg = `${label}: ${el.currentTime.toFixed(1)} s played, ${probe.stalls} stalls`
+      hud.textContent = `${msg}\nbuffer ahead ${ahead.toFixed(1)} s · dropped ${q?.droppedVideoFrames ?? '?'}/${q?.totalVideoFrames ?? '?'} · ${el.videoWidth}x${el.videoHeight}`
+      onProgress?.(msg)
       if (el.ended) break
     }
   } catch (e) {
@@ -166,13 +248,15 @@ export async function probePlayback(
     probe.totalFrames = q?.totalVideoFrames ?? 0
     probe.decoded = el.videoWidth ? `${el.videoWidth}x${el.videoHeight}` : 'none'
     if (!Number.isFinite(probe.minBufferAheadSecs)) probe.minBufferAheadSecs = 0
+    if (pacing) Object.assign(probe, pacing.stop())
     el.removeEventListener('waiting', onWaiting)
     el.removeEventListener('playing', onPlaying)
     hls?.destroy()
     el.pause()
     el.removeAttribute('src')
     el.load()
-    el.remove()
+    host.remove()
+    await native?.setImmersive(false).catch(() => undefined)
   }
   return probe
 }
@@ -377,6 +461,12 @@ export async function runBenchmark(
         totalFrames: 0,
         decoded: '',
         minBufferAheadSecs: 0,
+        presentedFrames: 0,
+        medianFrameGapMs: 0,
+        hitches: 0,
+        worstFrameGapMs: 0,
+        longFrames: 0,
+        worstLongFrameMs: 0,
         error: e instanceof Error ? e.message : String(e),
       })
     }
@@ -444,6 +534,8 @@ export function formatReport(r: Report): string {
       `first frame: ${p.timeToFirstFrameMs ?? 'never'} ms · played ${p.playedSecs} s`,
       `stalls: ${p.stalls} (${p.stalledMs} ms) · min buffer ahead ${p.minBufferAheadSecs.toFixed(1)} s`,
       `frames: ${p.totalFrames} total, ${p.droppedFrames} dropped (${p.totalFrames ? ((p.droppedFrames / p.totalFrames) * 100).toFixed(1) : '0'}%) · decoded ${p.decoded}`,
+      `pacing: ${p.presentedFrames} presented · median gap ${p.medianFrameGapMs} ms · ${p.hitches} hitches (>1.5× gap) · worst gap ${p.worstFrameGapMs} ms`,
+      `main thread: ${p.longFrames} long frames (>50 ms) · worst ${p.worstLongFrameMs} ms`,
       `error: ${p.error ?? 'none'}`,
       '',
     )
