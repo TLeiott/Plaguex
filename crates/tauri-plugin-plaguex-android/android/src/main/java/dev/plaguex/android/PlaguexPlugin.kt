@@ -194,11 +194,12 @@ class PlaguexPlugin(private val activity: Activity) : Plugin(activity) {
     fun shareFile(invoke: Invoke) {
         val args = invoke.parseArgs(ShareFileArgs::class.java)
         try {
+            // Reuses the FileProvider Tauri declares for the app (cache dir is exported there).
             val dir = File(activity.cacheDir, "share").apply { mkdirs() }
             val file = File(dir, args.name.replace(Regex("[^A-Za-z0-9._-]"), "_"))
             file.writeText(args.content)
             val uri = FileProvider.getUriForFile(
-                activity, "${activity.packageName}.plaguex.fileprovider", file
+                activity, "${activity.packageName}.fileprovider", file
             )
             val send = Intent(Intent.ACTION_SEND).apply {
                 type = args.mime
