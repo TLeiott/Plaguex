@@ -58,7 +58,15 @@ async fn share_file<R: Runtime>(
     }
     #[cfg(not(target_os = "android"))]
     {
-        let _ = (app, name, mime, content, subject);
+        let _ = (
+            app,
+            ShareFileArgs {
+                name,
+                mime,
+                content,
+                subject,
+            },
+        );
         Err("sharing is only available on Android".into())
     }
 }
