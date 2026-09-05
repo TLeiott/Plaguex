@@ -15,7 +15,13 @@ export const q = {
   continueWatching: () =>
     queryOptions({
       queryKey: [serverKey(), 'continueWatching'],
-      queryFn: () => activeServer().continueWatching(30),
+      // The continueWatching hub is empty on some servers (seen live on PMS 1.43 for a shared user);
+      // fall back to the classic On Deck endpoint, which every server version supports.
+      queryFn: async () => {
+        const s = activeServer()
+        const cw = await s.continueWatching(30)
+        return cw.length > 0 ? cw : s.onDeck(30)
+      },
       staleTime: 30_000,
     }),
   recentlyAdded: (libraryId: string) =>

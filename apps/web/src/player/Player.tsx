@@ -83,7 +83,13 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
   }, [item, caps, tracks, resumeMs, sessionId, forceTranscode, localUrl])
 
   const status = useMediaSource(video, plan, resumeMs / 1000)
-  useTimeline(item, sessionId, video, status.kind === 'ready')
+  useTimeline(
+    item,
+    sessionId,
+    video,
+    status.kind === 'ready',
+    plan?.protocol === 'hls' ? resumeMs : 0,
+  )
 
   // Automatic recovery: direct play failed at runtime -> switch to the transcoder at the same position.
   useEffect(() => {

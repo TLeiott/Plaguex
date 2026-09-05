@@ -11,6 +11,8 @@ export default tseslint.config(
       '**/assets/**',
       '**/routeTree.gen.ts',
       'apps/desktop/src-tauri/**',
+      'target/**',
+      'crates/**',
       'playwright-report/**',
       'test-results/**',
     ],

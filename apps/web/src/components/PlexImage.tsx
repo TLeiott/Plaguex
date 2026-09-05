@@ -17,8 +17,12 @@ export function PlexImage({ path, width, height, className, alt = '', ...rest }:
   if (!path || failed) {
     return <div className={cx('bg-bg-3', className)} aria-hidden />
   }
-  // Request 2x for HiDPI; the photo transcoder is cheap and results are cached server-side.
-  const src = server.imageUrl(path, width * 2, height * 2)
+  // Match the device pixel ratio (capped at 2x) so remote servers don't ship oversized images.
+  const dpr = Math.min(
+    2,
+    Math.max(1, Math.round(typeof window !== 'undefined' ? window.devicePixelRatio : 1)),
+  )
+  const src = server.imageUrl(path, width * dpr, height * dpr)
   return (
     <img
       src={src}

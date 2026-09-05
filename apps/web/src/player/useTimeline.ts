@@ -11,6 +11,8 @@ export function useTimeline(
   sessionId: string,
   video: React.RefObject<HTMLVideoElement | null>,
   enabled: boolean,
+  /** HLS streams start at the requested offset with currentTime 0; add it back for absolute positions. */
+  offsetMs = 0,
 ) {
   const last = useRef<{ state: PlaybackState; timeMs: number }>({ state: 'stopped', timeMs: 0 })
 
@@ -20,8 +22,15 @@ export function useTimeline(
     if (!el) return
     const durationMs = item.durationMs ?? (Math.floor(el.duration * 1000) || 0)
 
+    // Track the position ourselves: by the time this effect's cleanup runs on unmount, the media
+    // source hook may already have reset the element (currentTime would read 0).
+    let lastTimeMs = Math.floor(el.currentTime * 1000)
+    const onTimeUpdate = () => {
+      lastTimeMs = Math.floor(el.currentTime * 1000)
+    }
+    el.addEventListener('timeupdate', onTimeUpdate)
     const report = (state: PlaybackState, keepalive = false) => {
-      const timeMs = Math.floor(el.currentTime * 1000)
+      const timeMs = offsetMs + lastTimeMs
       last.current = { state, timeMs }
       void activeServer()
         .timeline({
@@ -54,11 +63,12 @@ export function useTimeline(
     return () => {
       clearInterval(interval)
       window.removeEventListener('pagehide', onPageHide)
+      el.removeEventListener('timeupdate', onTimeUpdate)
       el.removeEventListener('play', onPlay)
       el.removeEventListener('pause', onPause)
       el.removeEventListener('ended', onEnded)
       // Final position so resume works even when the tab is closed mid-episode.
       report('stopped')
     }
-  }, [item, sessionId, video, enabled])
+  }, [item, sessionId, video, enabled, offsetMs])
 }
