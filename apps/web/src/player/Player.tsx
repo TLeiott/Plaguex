@@ -30,11 +30,13 @@ interface Props {
   startMs: number
   /** Next episode, if any, for autoplay + the "Next" button. */
   next: Item | null
+  /** Local file (asset://) for offline playback; bypasses the server-side plan. */
+  localUrl?: string
 }
 
 const SEEK_STEP = 10
 
-export function Player({ item, caps, startMs, next }: Props) {
+export function Player({ item, caps, startMs, next, localUrl }: Props) {
   const navigate = useNavigate()
   const router = useRouter()
   const canGoBack = useCanGoBack()
@@ -50,6 +52,22 @@ export function Player({ item, caps, startMs, next }: Props) {
 
   const plan: PlaybackPlan | null = useMemo(() => {
     try {
+      if (localUrl) {
+        const media = item.media[mediaIndex]
+        const part = media?.parts[0]
+        if (!media || !part) return null
+        return {
+          method: 'directplay',
+          protocol: 'file',
+          url: localUrl,
+          mediaIndex,
+          partIndex: 0,
+          media,
+          part,
+          sessionId,
+          reasons: [],
+        }
+      }
       return buildPlan({
         item,
         caps,
@@ -62,7 +80,7 @@ export function Player({ item, caps, startMs, next }: Props) {
     } catch {
       return null
     }
-  }, [item, caps, tracks, resumeMs, sessionId, forceTranscode])
+  }, [item, caps, tracks, resumeMs, sessionId, forceTranscode, localUrl])
 
   const status = useMediaSource(video, plan, resumeMs / 1000)
   useTimeline(item, sessionId, video, status.kind === 'ready')

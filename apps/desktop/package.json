@@ -1,0 +1,19 @@
+{
+  "name": "@plaguex/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tauri 2 shell for Plaguex (Linux + Android)",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "echo 'use pnpm --filter @plaguex/desktop tauri build' ",
+    "typecheck": "echo 'no ts sources'",
+    "android:init": "tauri android init",
+    "android:dev": "tauri android dev",
+    "android:build": "tauri android build --apk"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4"
+  }
+}

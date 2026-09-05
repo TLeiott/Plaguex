@@ -11,6 +11,8 @@ blob-report/
 .tanstack/
 routeTree.gen.ts.tmp
 apps/desktop/src-tauri/target/
+target/
+crates/**/target/
 apps/desktop/src-tauri/gen/android/.gradle/
 apps/desktop/src-tauri/gen/android/app/build/
 apps/desktop/src-tauri/gen/android/local.properties

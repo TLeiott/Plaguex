@@ -7,7 +7,7 @@ import { createWebPlatform } from './web'
  */
 export async function createTauriPlatform(): Promise<Platform> {
   const web = createWebPlatform()
-  const { invoke } = await import('@tauri-apps/api/core')
+  const { invoke, convertFileSrc } = await import('@tauri-apps/api/core')
   const { platform: osPlatform } = await import('@tauri-apps/plugin-os')
   const os = osPlatform()
   const kind = os === 'android' ? 'tauri-android' : os === 'linux' ? 'tauri-linux' : 'tauri-other'
@@ -26,7 +26,10 @@ export async function createTauriPlatform(): Promise<Platform> {
       resume: (id) => invoke('download_resume', { id }),
       remove: (id) => invoke('download_remove', { id }),
       list: () => invoke('download_list'),
-      playbackUrl: (id) => invoke('download_playback_url', { id }),
+      playbackUrl: async (id) => {
+        const path = await invoke<string | null>('download_local_path', { id })
+        return path ? convertFileSrc(path) : null
+      },
       subscribe: (cb) => {
         let unlisten: (() => void) | null = null
         void import('@tauri-apps/api/event').then(({ listen }) =>

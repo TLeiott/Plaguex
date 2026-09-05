@@ -5,3 +5,7 @@ apps/desktop/src-tauri/gen
 apps/desktop/src-tauri/target
 playwright-report
 test-results
+packages/mock-plex/assets
+crates/**/target
+target
+Cargo.lock

@@ -22,12 +22,23 @@ export const Route = createFileRoute('/play/$ratingKey')({
 
 function PlayPage() {
   const { ratingKey } = Route.useParams()
-  const { restart } = Route.useSearch()
+  const { restart, offline } = Route.useSearch()
   const item = useQuery(q.item(ratingKey))
   const [caps, setCaps] = useState<PlayerCapabilities | null>(null)
+  // undefined = still resolving the local file; null = play from the server
+  const [localUrl, setLocalUrl] = useState<string | null | undefined>(offline ? undefined : null)
   useEffect(() => {
     void platform().probeCapabilities().then(setCaps)
   }, [])
+  useEffect(() => {
+    if (!offline) return
+    const dm = platform().downloads
+    if (!dm) {
+      setLocalUrl(null)
+      return
+    }
+    void dm.playbackUrl(ratingKey).then((u) => setLocalUrl(u ?? null))
+  }, [offline, ratingKey])
   const next = useNextEpisode(
     item.data ?? {
       ratingKey,
@@ -45,7 +56,7 @@ function PlayPage() {
     },
   )
 
-  if (item.isPending || !caps)
+  if (item.isPending || !caps || localUrl === undefined)
     return (
       <div className="h-full bg-black">
         <PageSpinner />
@@ -61,6 +72,7 @@ function PlayPage() {
         caps={caps}
         startMs={startMs}
         next={next}
+        {...(localUrl ? { localUrl } : {})}
       />
     </div>
   )
