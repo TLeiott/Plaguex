@@ -54,6 +54,18 @@ export function isImageSubtitle(s: MediaStream): boolean {
   return IMAGE_SUBS.has((s.codec ?? s.format ?? '').toLowerCase())
 }
 
+/**
+ * Whether the server must render this subtitle into the video. True for image subtitles and for any
+ * subtitle embedded in the container: PMS only serves external subtitle files through
+ * /library/streams (embedded ones return 501, verified on PMS 1.43), and the transcoder's sidecar
+ * endpoint starts a full DASH session, so burn-in is the only reliable HTML5 path.
+ */
+export function subtitleNeedsBurn(sub: MediaStream, caps: PlayerCapabilities): boolean {
+  if (isImageSubtitle(sub)) return true
+  if (!sub.external) return true
+  return !caps.subtitleFormats.includes((sub.codec ?? sub.format ?? '').toLowerCase())
+}
+
 export function pickDefaultMedia(item: Item): number {
   // Prefer the version with the highest resolution that has parts.
   let best = 0
@@ -114,13 +126,13 @@ export function canDirectPlay(
 
   if (prefs.subtitleStreamId) {
     const sub = part.streams.find((s) => s.id === prefs.subtitleStreamId)
-    if (sub && isImageSubtitle(sub)) reasons.push(`image subtitle ${sub.codec ?? ''} needs burn-in`)
-    else if (
-      sub &&
-      !sub.external &&
-      !caps.subtitleFormats.includes((sub.codec ?? sub.format ?? '').toLowerCase())
-    )
-      reasons.push(`embedded subtitle ${sub.codec ?? ''} cannot be extracted client-side`)
+    if (sub && subtitleNeedsBurn(sub, caps)) {
+      reasons.push(
+        isImageSubtitle(sub)
+          ? `image subtitle ${sub.codec ?? ''} needs burn-in`
+          : `embedded subtitle ${sub.codec ?? ''} cannot be extracted client-side`,
+      )
+    }
   }
   return { ok: reasons.length === 0, reasons }
 }
@@ -157,10 +169,7 @@ export function planPlayback(i: PlanInput): PlaybackPlan {
   const sub = prefs.subtitleStreamId
     ? part.streams.find((s) => s.id === prefs.subtitleStreamId)
     : undefined
-  const subNeedsBurn = sub
-    ? isImageSubtitle(sub) ||
-      (!sub.external && !i.caps.subtitleFormats.includes((sub.codec ?? '').toLowerCase()))
-    : false
+  const subNeedsBurn = sub ? subtitleNeedsBurn(sub, i.caps) : false
   if (sub && !subNeedsBurn) {
     sidecar = {
       stream: sub,

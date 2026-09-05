@@ -86,6 +86,11 @@ pnpm --filter @plaguex/desktop android:init   # once: generates the Gradle proje
 pnpm --filter @plaguex/desktop android:build  # APK in apps/desktop/src-tauri/gen/android/app/build/outputs
 ```
 
+### Subtitles in the web player
+
+- External subtitle files (`.srt` next to the video) are fetched as WebVTT and rendered by the browser, with no transcoding.
+- Embedded subtitles (inside the MKV) are burned in by the server, which forces a video transcode. Plex Media Server does not serve embedded subtitle tracks to browsers (verified on PMS 1.43: the streams endpoint answers 501, the transcoder sidecar endpoint spawns a full DASH session). The native Linux (mpv) and Android (ExoPlayer) backends will render them directly.
+
 ### Keyboard shortcuts (player)
 
 | Key       | Action               |
