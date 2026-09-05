@@ -1,7 +1,13 @@
 package dev.plaguex.android
 
 import android.app.Activity
+import android.Manifest
+import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import android.graphics.Color
 import android.view.View
 import android.webkit.WebView
@@ -23,6 +29,15 @@ class OrientationArgs {
 @InvokeArg
 class EnabledArgs {
     var enabled: Boolean = true
+}
+
+@InvokeArg
+class DownloadStateArgs {
+    var active: Boolean = false
+    var title: String = "Downloading"
+    var text: String = ""
+    /** 0..100, or -1 for indeterminate */
+    var progress: Int = -1
 }
 
 /**
@@ -107,5 +122,46 @@ class PlaguexPlugin(private val activity: Activity) : Plugin(activity) {
         fitSystemWindows = args.enabled
         activity.runOnUiThread { (insetTarget ?: webView)?.let { ViewCompat.requestApplyInsets(it) } }
         invoke.resolve()
+    }
+
+    /** Keeps the process alive with a progress notification while downloads run. */
+    @Command
+    fun setDownloadState(invoke: Invoke) {
+        val args = invoke.parseArgs(DownloadStateArgs::class.java)
+        activity.runOnUiThread {
+            if (args.active) {
+                requestNotificationPermission()
+                val intent = Intent(activity, DownloadService::class.java).apply {
+                    action = DownloadService.ACTION_UPDATE
+                    putExtra(DownloadService.EXTRA_TITLE, args.title)
+                    putExtra(DownloadService.EXTRA_TEXT, args.text)
+                    putExtra(DownloadService.EXTRA_PROGRESS, args.progress)
+                }
+                try {
+                    ContextCompat.startForegroundService(activity, intent)
+                } catch (_: Exception) {
+                    // Background-start restrictions: the download still runs, just without the service.
+                }
+            } else {
+                val intent = Intent(activity, DownloadService::class.java).apply {
+                    action = DownloadService.ACTION_STOP
+                }
+                try {
+                    activity.startService(intent)
+                } catch (_: Exception) {
+                }
+            }
+        }
+        invoke.resolve()
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = ContextCompat.checkSelfPermission(
+            activity, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 4712)
+        }
     }
 }

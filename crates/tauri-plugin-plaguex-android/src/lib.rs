@@ -23,6 +23,39 @@ struct EnabledArgs {
     enabled: bool,
 }
 
+/// Aggregate download state shown in the Android foreground-service notification.
+#[derive(Serialize, Clone, Debug)]
+pub struct DownloadState {
+    pub active: bool,
+    pub title: String,
+    pub text: String,
+    /// 0..=100, or -1 when unknown.
+    pub progress: i32,
+}
+
+/// Start/update (active) or stop (inactive) the foreground service that keeps downloads running
+/// while the app is in the background. No-op off Android or before the plugin is registered.
+pub fn set_download_state<R: Runtime>(
+    app: &AppHandle<R>,
+    state: DownloadState,
+) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        match app.try_state::<Native<R>>() {
+            Some(native) => native
+                .0
+                .run_mobile_plugin::<()>("setDownloadState", state)
+                .map_err(|e| e.to_string()),
+            None => Ok(()),
+        }
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, state);
+        Ok(())
+    }
+}
+
 #[cfg(target_os = "android")]
 fn call<R: Runtime>(
     app: &AppHandle<R>,
