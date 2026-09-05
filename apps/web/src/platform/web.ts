@@ -23,6 +23,8 @@ export function createWebPlatform(): Platform {
     downloads: null,
     externalPlayer: null,
     nativeVideo: null,
+    deviceInfo: null,
+    openVideo: null,
     shareFile: null,
     screen: null,
     deviceName: () => {

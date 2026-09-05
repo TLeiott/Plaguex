@@ -11,6 +11,8 @@ Allows the app to control screen orientation, system bar insets, immersive mode 
 - `allow-native-load`
 - `allow-native-control`
 - `allow-native-stop`
+- `allow-device-info`
+- `allow-open-video`
 
 ## Permission Table
 
@@ -20,6 +22,32 @@ Allows the app to control screen orientation, system bar insets, immersive mode 
 <th>Description</th>
 </tr>
 
+
+<tr>
+<td>
+
+`plaguex-android:allow-device-info`
+
+</td>
+<td>
+
+Enables the device_info command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`plaguex-android:deny-device-info`
+
+</td>
+<td>
+
+Denies the device_info command without any pre-configured scope.
+
+</td>
+</tr>
 
 <tr>
 <td>
@@ -95,6 +123,32 @@ Enables the native_stop command without any pre-configured scope.
 <td>
 
 Denies the native_stop command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`plaguex-android:allow-open-video`
+
+</td>
+<td>
+
+Enables the open_video command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`plaguex-android:deny-open-video`
+
+</td>
+<td>
+
+Denies the open_video command without any pre-configured scope.
 
 </td>
 </tr>

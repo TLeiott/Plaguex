@@ -11,6 +11,20 @@ export interface NativeStats {
   decoder: string
   droppedFrames: number
   renderedFrames: number
+  skippedFrames: number
+  maxConsecutiveDropped: number
+  frameOffsetMs: number
+  displayHz: number
+}
+
+const EMPTY_STATS: NativeStats = {
+  decoder: '',
+  droppedFrames: 0,
+  renderedFrames: 0,
+  skippedFrames: 0,
+  maxConsecutiveDropped: 0,
+  frameOffsetMs: 0,
+  displayHz: 0,
 }
 
 /**
@@ -31,7 +45,7 @@ export class NativeVideo extends EventTarget {
   private h = 0
   private loaded = false
   private stopEvents: (() => void) | null = null
-  stats: NativeStats = { decoder: '', droppedFrames: 0, renderedFrames: 0 }
+  stats: NativeStats = EMPTY_STATS
   error: { code: number; message: string } | null = null
   readonly playbackRate = 1
 
@@ -132,7 +146,15 @@ export class NativeVideo extends EventTarget {
           this.w = e.width
           this.h = e.height
         }
-        this.stats = { decoder: e.decoder, droppedFrames: e.dropped, renderedFrames: e.rendered }
+        this.stats = {
+          decoder: e.decoder,
+          droppedFrames: e.dropped,
+          renderedFrames: e.rendered,
+          skippedFrames: e.skipped ?? 0,
+          maxConsecutiveDropped: e.maxConsecutiveDropped ?? 0,
+          frameOffsetMs: e.frameOffsetMs ?? 0,
+          displayHz: e.displayHz ?? 0,
+        }
         if (!this.loaded) {
           this.loaded = true
           this.emit('loadedmetadata')

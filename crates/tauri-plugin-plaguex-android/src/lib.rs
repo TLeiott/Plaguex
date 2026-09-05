@@ -167,6 +167,9 @@ pub struct NativePlayRequest {
     pub subtitle_track: Option<u32>,
     pub embedded_subtitle_count: u32,
     pub subtitle_files: Vec<SubtitleFile>,
+    /// Diagnostics: play video only, so the renderer runs on the standalone clock.
+    #[serde(default)]
+    pub disable_audio: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -235,6 +238,40 @@ fn native_stop<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
     }
 }
 
+#[derive(Serialize)]
+struct OpenVideoArgs {
+    url: String,
+    mime: String,
+}
+
+/// Display modes, thermal/power state and the video decoders' achievable frame rates.
+#[tauri::command]
+fn device_info<R: Runtime>(app: AppHandle<R>) -> Result<serde_json::Value, String> {
+    #[cfg(target_os = "android")]
+    return app
+        .state::<Native<R>>()
+        .0
+        .run_mobile_plugin::<serde_json::Value>("deviceInfo", ())
+        .map_err(|e| e.to_string());
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        Ok(serde_json::Value::Null)
+    }
+}
+
+/// Hands a video URL to another installed player (ACTION_VIEW) for A/B comparison.
+#[tauri::command]
+fn open_video<R: Runtime>(app: AppHandle<R>, url: String, mime: String) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    return call(&app, "openVideo", OpenVideoArgs { url, mime });
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, OpenVideoArgs { url, mime });
+        Err("only available on Android".into())
+    }
+}
+
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("plaguex-android")
         .invoke_handler(tauri::generate_handler![
@@ -244,7 +281,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             share_file,
             native_load,
             native_control,
-            native_stop
+            native_stop,
+            device_info,
+            open_video
         ])
         .setup(|_app, _api| {
             #[cfg(target_os = "android")]

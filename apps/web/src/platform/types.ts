@@ -65,6 +65,8 @@ export interface NativePlayRequest {
   subtitleTrack?: number
   embeddedSubtitleCount: number
   subtitleFiles: { url: string; mime: string; language: string; label: string }[]
+  /** Diagnostics only: no audio track, so the video renderer runs on the standalone clock. */
+  disableAudio?: boolean
 }
 
 export type NativeVideoEvent =
@@ -80,6 +82,11 @@ export type NativeVideoEvent =
       decoder: string
       dropped: number
       rendered: number
+      skipped: number
+      maxConsecutiveDropped: number
+      /** Average early (+) / late (-) frame arrival vs. release time, ms. */
+      frameOffsetMs: number
+      displayHz: number
     }
   | { type: 'ended' }
   | { type: 'error'; message: string; fatal: boolean }
@@ -116,6 +123,10 @@ export interface Platform {
   downloads: DownloadManager | null
   externalPlayer: ExternalPlayer | null
   nativeVideo: NativeVideoBackend | null
+  /** Thermal/power/display/decoder facts for diagnostics (Android). */
+  deviceInfo: (() => Promise<Record<string, unknown> | null>) | null
+  /** Hand a URL to another installed player for an A/B check (Android). */
+  openVideo: ((url: string, mime: string) => Promise<void>) | null
   /** Native share sheet for a generated text file (Android). null = not available. */
   shareFile:
     | ((file: { name: string; mime: string; content: string; subject: string }) => Promise<void>)

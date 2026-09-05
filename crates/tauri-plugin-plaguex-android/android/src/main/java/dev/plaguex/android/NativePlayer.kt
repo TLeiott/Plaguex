@@ -52,6 +52,7 @@ class NativePlayRequestArg {
     var subtitleTrack: Int? = null
     var embeddedSubtitleCount: Int = 0
     var subtitleFiles: List<SubtitleFileArg> = emptyList()
+    var disableAudio: Boolean = false
 }
 
 /**
@@ -92,9 +93,7 @@ class NativePlayer(private val activity: Activity, private val webView: WebView)
             .setAllowCrossProtocolRedirects(true)
             .setDefaultRequestProperties(req.httpHeaders)
         val dataSource = DefaultDataSource.Factory(activity, http)
-        val renderers = DefaultRenderersFactory(activity)
-            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-            .setEnableDecoderFallback(true)
+        val renderers = DefaultRenderersFactory(activity).setEnableDecoderFallback(true)
         val exo = ExoPlayer.Builder(activity, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSource))
             .setAudioAttributes(
@@ -107,6 +106,10 @@ class NativePlayer(private val activity: Activity, private val webView: WebView)
             .setHandleAudioBecomingNoisy(true)
             .build()
         player = exo
+        if (req.disableAudio) {
+            exo.trackSelectionParameters = exo.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build()
+        }
         exo.setVideoSurfaceView(surface)
         exo.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
@@ -235,8 +238,25 @@ class NativePlayer(private val activity: Activity, private val webView: WebView)
                 .put("decoder", decoder)
                 .put("dropped", counters?.droppedBufferCount ?: 0)
                 .put("rendered", counters?.renderedOutputBufferCount ?: 0)
+                .put("skipped", counters?.skippedOutputBufferCount ?: 0)
+                .put("maxConsecutiveDropped", counters?.maxConsecutiveDroppedBufferCount ?: 0)
+                // Average early(+)/late(-) arrival of frames vs. their release time, in ms.
+                .put(
+                    "frameOffsetMs",
+                    counters?.let {
+                        if (it.videoFrameProcessingOffsetCount > 0)
+                            it.totalVideoFrameProcessingOffsetUs / 1000.0 / it.videoFrameProcessingOffsetCount
+                        else 0.0
+                    } ?: 0.0,
+                )
+                .put("displayHz", displayHz())
         )
     }
+
+    @Suppress("DEPRECATION")
+    private fun displayHz(): Float =
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) activity.display?.refreshRate ?: 0f
+        else activity.windowManager.defaultDisplay.refreshRate
 
     private fun send(obj: JSObject) {
         channel?.send(obj)

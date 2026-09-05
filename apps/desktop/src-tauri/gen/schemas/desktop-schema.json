@@ -2511,10 +2511,16 @@
           "markdownDescription": "Denies the version command without any pre-configured scope."
         },
         {
-          "description": "Allows the app to control screen orientation, system bar insets, immersive mode and the native video player.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`\n- `allow-native-load`\n- `allow-native-control`\n- `allow-native-stop`",
+          "description": "Allows the app to control screen orientation, system bar insets, immersive mode and the native video player.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`\n- `allow-native-load`\n- `allow-native-control`\n- `allow-native-stop`\n- `allow-device-info`\n- `allow-open-video`",
           "type": "string",
           "const": "plaguex-android:default",
-          "markdownDescription": "Allows the app to control screen orientation, system bar insets, immersive mode and the native video player.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`\n- `allow-native-load`\n- `allow-native-control`\n- `allow-native-stop`"
+          "markdownDescription": "Allows the app to control screen orientation, system bar insets, immersive mode and the native video player.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`\n- `allow-native-load`\n- `allow-native-control`\n- `allow-native-stop`\n- `allow-device-info`\n- `allow-open-video`"
+        },
+        {
+          "description": "Enables the device_info command without any pre-configured scope.",
+          "type": "string",
+          "const": "plaguex-android:allow-device-info",
+          "markdownDescription": "Enables the device_info command without any pre-configured scope."
         },
         {
           "description": "Enables the native_control command without any pre-configured scope.",
@@ -2533,6 +2539,12 @@
           "type": "string",
           "const": "plaguex-android:allow-native-stop",
           "markdownDescription": "Enables the native_stop command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the open_video command without any pre-configured scope.",
+          "type": "string",
+          "const": "plaguex-android:allow-open-video",
+          "markdownDescription": "Enables the open_video command without any pre-configured scope."
         },
         {
           "description": "Enables the set_fit_system_windows command without any pre-configured scope.",
@@ -2559,6 +2571,12 @@
           "markdownDescription": "Enables the share_file command without any pre-configured scope."
         },
         {
+          "description": "Denies the device_info command without any pre-configured scope.",
+          "type": "string",
+          "const": "plaguex-android:deny-device-info",
+          "markdownDescription": "Denies the device_info command without any pre-configured scope."
+        },
+        {
           "description": "Denies the native_control command without any pre-configured scope.",
           "type": "string",
           "const": "plaguex-android:deny-native-control",
@@ -2575,6 +2593,12 @@
           "type": "string",
           "const": "plaguex-android:deny-native-stop",
           "markdownDescription": "Denies the native_stop command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_video command without any pre-configured scope.",
+          "type": "string",
+          "const": "plaguex-android:deny-open-video",
+          "markdownDescription": "Denies the open_video command without any pre-configured scope."
         },
         {
           "description": "Denies the set_fit_system_windows command without any pre-configured scope.",

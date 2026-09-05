@@ -44,6 +44,8 @@ export interface PlaybackProbe {
   /** Main-thread rAF gaps > 50 ms (UI jank that also delays compositing). */
   longFrames: number
   worstLongFrameMs: number
+  /** Backend-specific detail line (native decoder counters). */
+  extra?: string
   error: string | null
 }
 
@@ -51,6 +53,8 @@ export interface Report {
   generatedAt: string
   app: Record<string, unknown>
   device: Record<string, unknown>
+  /** Thermal, power, display and decoder facts from the OS (Android). */
+  nativeDevice: Record<string, unknown> | null
   settings: Record<string, unknown>
   capabilities: PlayerCapabilities | null
   steps: StepResult[]
@@ -278,6 +282,7 @@ export async function probeNative(
   plan: PlaybackPlan,
   seconds: number,
   onProgress?: Progress,
+  opts: { disableAudio?: boolean } = {},
 ): Promise<PlaybackProbe> {
   const backend = platform().nativeVideo
   const native = platform().screen
@@ -340,7 +345,10 @@ export async function probeNative(
   })
   let pacing: ReturnType<typeof observePacing> | undefined
   try {
-    await el.load(buildNativeRequest({ plan, tracks: {}, startSecs: 0, title: label }))
+    await el.load({
+      ...buildNativeRequest({ plan, tracks: {}, startSecs: 0, title: label }),
+      ...(opts.disableAudio ? { disableAudio: true } : {}),
+    })
     // rVFC does not exist for a native surface; keep the rAF jank counter only.
     pacing = observePacing(document.createElement('video'))
     const deadline = performance.now() + seconds * 1000
@@ -368,6 +376,8 @@ export async function probeNative(
       probe.longFrames = p.longFrames
       probe.worstLongFrameMs = p.worstLongFrameMs
     }
+    const st = el.stats
+    probe.extra = `native: skipped ${st.skippedFrames} · max consecutive dropped ${st.maxConsecutiveDropped} · avg frame offset ${st.frameOffsetMs.toFixed(1)} ms (negative = decoder late) · display ${st.displayHz.toFixed(0)} Hz${opts.disableAudio ? ' · audio disabled' : ''}`
     await el.unload().catch(() => undefined)
     host.remove()
     document.documentElement.classList.remove('plaguex-native-video')
@@ -453,6 +463,7 @@ export async function runBenchmark(
   )
 
   let firstItem: Item | undefined
+  let libraryItems: Item[] = []
   steps.push(
     await timed('Libraries', async () => {
       const libs = await activeServer().libraries()
@@ -475,6 +486,7 @@ export async function runBenchmark(
       if (!lib) return { status: 'skip', detail: 'no library' }
       const page = await activeServer().libraryItems(lib.id, { limit: 60 })
       firstItem ??= page.items.find((i) => i.media.length > 0)
+      libraryItems = page.items
       return { detail: `${page.items.length} of ${page.total} items from ${lib.title}` }
     }),
   )
@@ -548,26 +560,40 @@ export async function runBenchmark(
     const first = done[0]!
     const media = first.item.media[0]
     const part = media?.parts[0]
-    if (media && part)
+    if (media && part) {
+      const localPlan: PlaybackPlan = {
+        method: 'directplay',
+        protocol: 'file',
+        url: localUrl,
+        mediaIndex: 0,
+        partIndex: 0,
+        media,
+        part,
+        sessionId: newSessionId(),
+        reasons: [],
+      }
       playback.push(
         await probeNative(
           `Native downloaded: ${first.item.title}`,
           'local file · ExoPlayer',
-          {
-            method: 'directplay',
-            protocol: 'file',
-            url: localUrl,
-            mediaIndex: 0,
-            partIndex: 0,
-            media,
-            part,
-            sessionId: newSessionId(),
-            reasons: [],
-          },
+          localPlan,
           playbackSeconds,
           onProgress,
         ),
       )
+      // Same file without audio: if drops vanish, the audio clock (not the decoder) forces them.
+      onProgress('Playing the downloaded file video-only')
+      playback.push(
+        await probeNative(
+          `Native downloaded, video only: ${first.item.title}`,
+          'local file · ExoPlayer · audio disabled',
+          { ...localPlan, sessionId: newSessionId() },
+          playbackSeconds,
+          onProgress,
+          { disableAudio: true },
+        ),
+      )
+    }
   }
   if (firstItem && caps) {
     onProgress('Streaming from the server')
@@ -607,6 +633,34 @@ export async function runBenchmark(
             onProgress,
           ),
         )
+        // A different codec from the same library: separates "this decoder" from "this device".
+        const firstCodec = firstItem.media[0]?.videoCodec ?? ''
+        const other = libraryItems.find(
+          (i) =>
+            i.ratingKey !== firstItem!.ratingKey &&
+            i.media.length > 0 &&
+            (i.media[0]?.videoCodec ?? '') !== firstCodec &&
+            (i.media[0]?.videoCodec === 'h264' || firstCodec === 'h264'),
+        )
+        if (other) {
+          onProgress(`Streaming a ${other.media[0]?.videoCodec ?? ''} title natively`)
+          const otherPlan = buildPlan({
+            item: other,
+            caps: NATIVE_CAPS,
+            tracks: defaultTracks(other, 0),
+            startMs: 0,
+            sessionId: newSessionId(),
+          })
+          playback.push(
+            await probeNative(
+              `Native stream (${other.media[0]?.videoCodec ?? '?'} ${other.media[0]?.height ?? '?'}p): ${other.title}`,
+              `${otherPlan.method} · ${otherPlan.protocol} · ExoPlayer`,
+              otherPlan,
+              playbackSeconds,
+              onProgress,
+            ),
+          )
+        }
       }
     } catch (e) {
       playback.push({
@@ -632,8 +686,15 @@ export async function runBenchmark(
     }
   }
 
+  let nativeDevice: Record<string, unknown> | null = null
+  if (p.deviceInfo) {
+    onProgress('Reading device state')
+    nativeDevice = await p.deviceInfo().catch(() => null)
+  }
+
   return {
     generatedAt: new Date().toISOString(),
+    nativeDevice,
     app: {
       version: APP_VERSION,
       platform: p.kind,
@@ -679,6 +740,14 @@ export function formatReport(r: Report): string {
   lines.push(`Plaguex diagnostics · ${r.generatedAt}`, '')
   lines.push('## App', ...Object.entries(r.app).map(([k, v]) => `${k}: ${String(v)}`), '')
   lines.push('## Device', ...Object.entries(r.device).map(([k, v]) => `${k}: ${String(v)}`), '')
+  if (r.nativeDevice) {
+    lines.push('## Device state (OS)')
+    for (const [k, v] of Object.entries(r.nativeDevice)) {
+      if (Array.isArray(v)) lines.push(`${k}:`, ...v.map((x) => `  - ${String(x)}`))
+      else lines.push(`${k}: ${String(v)}`)
+    }
+    lines.push('')
+  }
   lines.push('## Settings', ...Object.entries(r.settings).map(([k, v]) => `${k}: ${String(v)}`), '')
   lines.push('## Capabilities', r.capabilities ? JSON.stringify(r.capabilities) : 'n/a', '')
   lines.push('## Checks')
@@ -696,6 +765,7 @@ export function formatReport(r: Report): string {
       `frames: ${p.totalFrames} total, ${p.droppedFrames} dropped (${p.totalFrames ? ((p.droppedFrames / p.totalFrames) * 100).toFixed(1) : '0'}%) · decoded ${p.decoded}`,
       `pacing: ${p.presentedFrames} presented · median gap ${p.medianFrameGapMs} ms · ${p.hitches} hitches (>1.5× gap) · worst gap ${p.worstFrameGapMs} ms`,
       `main thread: ${p.longFrames} long frames (>50 ms) · worst ${p.worstLongFrameMs} ms`,
+      ...(p.extra ? [p.extra] : []),
       `error: ${p.error ?? 'none'}`,
       '',
     )

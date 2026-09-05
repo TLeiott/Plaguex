@@ -45,6 +45,10 @@ const state = (
   decoder: 'c2.qti.avc.decoder',
   dropped: 0,
   rendered: 24,
+  skipped: 0,
+  maxConsecutiveDropped: 0,
+  frameOffsetMs: 12,
+  displayHz: 120,
   ...patch,
 })
 

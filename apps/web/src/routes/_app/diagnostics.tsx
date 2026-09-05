@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Activity, Copy, Share2 } from 'lucide-react'
 import { formatReport, runBenchmark, type Report } from '@/diagnostics/benchmark'
 import { platform } from '@/platform'
+import { useDownloads } from '@/downloads/store'
 import { Button } from '@/components/ui'
 import { cx } from '@/lib/format'
 
@@ -20,6 +21,18 @@ function DiagnosticsPage() {
   const [report, setReport] = useState<Report | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [text, setText] = useState('')
+  const downloaded = useDownloads((s) => Object.values(s.items).find((d) => d.status === 'done'))
+  const canOpenElsewhere = Boolean(platform().openVideo && platform().downloads && downloaded)
+  const openElsewhere = async () => {
+    const p = platform()
+    if (!p.openVideo || !p.downloads || !downloaded) return
+    const url = await p.downloads.playbackUrl(downloaded.id)
+    if (!url) {
+      setNotice('Downloaded file not available')
+      return
+    }
+    await p.openVideo(url, 'video/mp4').catch((e: unknown) => setNotice(String(e)))
+  }
 
   const run = async () => {
     setRunning(true)
@@ -99,6 +112,23 @@ function DiagnosticsPage() {
           </>
         ) : null}
       </div>
+      {canOpenElsewhere ? (
+        <div className="rounded-card border border-line bg-bg-2 p-4 text-sm">
+          <p className="font-medium">A/B check: play the downloaded file in another app</p>
+          <p className="mt-1 text-fg-2">
+            Opens the same file (via the local file server) in a player of your choice, e.g. VLC or
+            the Samsung video player. If it stutters there too, the device is the limit, not
+            Plaguex.
+          </p>
+          <Button
+            className="mt-3"
+            onClick={() => void openElsewhere()}
+            data-testid="open-elsewhere"
+          >
+            Open in another player
+          </Button>
+        </div>
+      ) : null}
       {notice ? <p className="text-sm text-fg-2">{notice}</p> : null}
       {running ? (
         <ul

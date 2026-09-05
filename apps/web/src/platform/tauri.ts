@@ -48,6 +48,14 @@ export async function createTauriPlatform(): Promise<Platform> {
             stop: () => invoke('plugin:plaguex-android|native_stop'),
           }
         : null,
+    deviceInfo:
+      kind === 'tauri-android'
+        ? () => invoke<Record<string, unknown> | null>('plugin:plaguex-android|device_info')
+        : null,
+    openVideo:
+      kind === 'tauri-android'
+        ? (url, mime) => invoke('plugin:plaguex-android|open_video', { url, mime })
+        : null,
     externalPlayer:
       kind === 'tauri-linux'
         ? {

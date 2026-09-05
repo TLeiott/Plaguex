@@ -6,6 +6,8 @@ const COMMANDS: &[&str] = &[
     "native_load",
     "native_control",
     "native_stop",
+    "device_info",
+    "open_video",
 ];
 
 fn main() {

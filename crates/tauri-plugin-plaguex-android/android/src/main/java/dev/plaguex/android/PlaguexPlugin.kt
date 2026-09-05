@@ -57,6 +57,12 @@ class NativeControlArgs {
 }
 
 @InvokeArg
+class OpenVideoArgs {
+    var url: String = ""
+    var mime: String = "video/mp4"
+}
+
+@InvokeArg
 class DownloadStateArgs {
     var active: Boolean = false
     var title: String = "Downloading"
@@ -152,6 +158,28 @@ class PlaguexPlugin(private val activity: Activity) : Plugin(activity) {
     fun nativeStop(invoke: Invoke) {
         activity.runOnUiThread { nativePlayer?.stop() }
         invoke.resolve()
+    }
+
+    /** Display, thermal, power and decoder facts for the diagnostics report. */
+    @Command
+    fun deviceInfo(invoke: Invoke) {
+        invoke.resolve(DeviceInfo.collect(activity))
+    }
+
+    /** Opens the URL in another installed video player (A/B check against our own rendering). */
+    @Command
+    fun openVideo(invoke: Invoke) {
+        val args = invoke.parseArgs(OpenVideoArgs::class.java)
+        try {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(android.net.Uri.parse(args.url), args.mime)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            activity.startActivity(Intent.createChooser(intent, "Play with"))
+            invoke.resolve()
+        } catch (e: Exception) {
+            invoke.reject(e.message ?: "no player found")
+        }
     }
 
     @Command
