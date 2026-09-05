@@ -117,24 +117,26 @@ describe('PlexTv', () => {
 
   it('keeps polling through transient errors and fails fast on 404', async () => {
     let calls = 0
-    const flaky = async (): Promise<Response> => {
+    const flaky = (): Promise<Response> => {
       calls++
-      if (calls === 1) throw new Error('signal is aborted without reason')
-      if (calls === 2) return new Response('busy', { status: 503 })
-      return new Response(
-        JSON.stringify({
-          id: 1,
-          code: 'ABCD',
-          expiresIn: 900,
-          createdAt: '',
-          expiresAt: '',
-          authToken: 'tok',
-          clientIdentifier: 'c',
-        }),
-        {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        },
+      if (calls === 1) return Promise.reject(new Error('signal is aborted without reason'))
+      if (calls === 2) return Promise.resolve(new Response('busy', { status: 503 }))
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            id: 1,
+            code: 'ABCD',
+            expiresIn: 900,
+            createdAt: '',
+            expiresAt: '',
+            authToken: 'tok',
+            clientIdentifier: 'c',
+          }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          },
+        ),
       )
     }
     const tv = new PlexTv(client, { baseUrl: 'http://tv.test', fetch: flaky })
@@ -144,7 +146,7 @@ describe('PlexTv', () => {
 
     const gone = new PlexTv(client, {
       baseUrl: 'http://tv.test',
-      fetch: async () => new Response('nope', { status: 404 }),
+      fetch: () => Promise.resolve(new Response('nope', { status: 404 })),
     })
     await expect(gone.waitForPin(pin, { intervalMs: 0 })).rejects.toThrow('no longer valid')
   })
