@@ -18,6 +18,8 @@ pub struct Downloads(pub Arc<DownloadManager>);
 /// Loopback HTTP server that streams finished downloads to the webview with Range support
 /// (the asset protocol fails on Android when playback resumes mid-file).
 pub struct Files(pub Arc<LocalFileServer>);
+/// Aggregate progress feeding the Android foreground-service notification.
+pub struct Progress_(pub Arc<StdMutex<Tracker>>);
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -33,6 +35,7 @@ pub async fn init<R: Runtime>(app: &AppHandle<R>, dir: PathBuf) -> anyhow::Resul
     let emitter = app.clone();
     let files = Arc::clone(&server);
     let tracker = Arc::new(StdMutex::new(Tracker::default()));
+    let tracker_state = Arc::clone(&tracker);
     let manager = DownloadManager::new(dir, move |p: Progress| {
         if p.status == Status::Done {
             if let Some(path) = &p.local_uri {
@@ -49,6 +52,7 @@ pub async fn init<R: Runtime>(app: &AppHandle<R>, dir: PathBuf) -> anyhow::Resul
     manager.register_completed(&server).await;
     app.manage(Downloads(manager));
     app.manage(Files(server));
+    app.manage(Progress_(tracker_state));
     Ok(())
 }
 
@@ -81,13 +85,21 @@ pub async fn download_resume(state: State<'_, Downloads>, id: String) -> Result<
 }
 
 #[tauri::command]
-pub async fn download_remove(
+pub async fn download_remove<R: Runtime>(
+    app: AppHandle<R>,
     state: State<'_, Downloads>,
     files: State<'_, Files>,
+    progress: State<'_, Progress_>,
     id: String,
 ) -> Result<(), String> {
     files.0.unregister(&id);
-    state.0.remove(&id).await.map_err(err)
+    let result = state.0.remove(&id).await.map_err(err);
+    // A removed download emits no final progress event; drop it from the aggregate so the
+    // notification updates (or disappears) right away.
+    if let Some(state) = progress.0.lock().unwrap().remove(&id) {
+        let _ = tauri_plugin_plaguex_android::set_download_state(&app, state);
+    }
+    result
 }
 
 /// http://127.0.0.1:<port>/files/<id> for a finished download, or null.
@@ -117,15 +129,26 @@ pub async fn download_local_path(
 /// Aggregates per-download progress into one notification state. Emits at most every second, plus
 /// immediately when the set of active downloads changes (so the service starts/stops promptly).
 #[derive(Default)]
-struct Tracker {
+pub struct Tracker {
     items: HashMap<String, Progress>,
     last_emit: Option<Instant>,
     was_active: bool,
 }
 
 impl Tracker {
+    /// Forget a download (removed by the user) and recompute; `Some` when the notification must change.
+    fn remove(&mut self, id: &str) -> Option<DownloadState> {
+        self.items.remove(id);
+        self.last_emit = None;
+        self.recompute()
+    }
+
     fn update(&mut self, p: &Progress) -> Option<DownloadState> {
         self.items.insert(p.id.clone(), p.clone());
+        self.recompute()
+    }
+
+    fn recompute(&mut self) -> Option<DownloadState> {
         let active: Vec<&Progress> = self
             .items
             .values()

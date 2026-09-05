@@ -126,6 +126,7 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
     () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
   )
   const [rotated, setRotated] = useState(false)
+  const [showStats, setShowStats] = useState(false)
   const native = platform().screen
   const toggleRotate = useCallback(async () => {
     if (rotated) {
@@ -560,7 +561,9 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
           {subtitle ? <p className="truncate text-sm text-white/70">{subtitle}</p> : null}
         </div>
         {plan ? (
-          <span
+          <button
+            type="button"
+            onClick={() => setShowStats((v) => !v)}
             className={cx(
               'rounded px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
               plan.method === 'directplay'
@@ -581,9 +584,10 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
                   : 'Transcode'}
             {plan.media.height ? ` · ${plan.media.height}p` : ''}
             {plan.media.bitrate ? ` · ${(plan.media.bitrate / 1000).toFixed(1)} Mbps` : ''}
-          </span>
+          </button>
         ) : null}
       </div>
+      {showStats && plan ? <PlaybackStats video={video} plan={plan} localUrl={localUrl} /> : null}
 
       {/* Bottom controls */}
       <div
@@ -759,6 +763,52 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
         </div>
       </div>
     </div>
+  )
+}
+
+/** Diagnostics overlay (tap the method badge): what is decoding, and how well. */
+function PlaybackStats({
+  video,
+  plan,
+  localUrl,
+}: {
+  video: React.RefObject<HTMLVideoElement | null>
+  plan: PlaybackPlan
+  localUrl: string | undefined
+}) {
+  const [stats, setStats] = useState<string[]>([])
+  useEffect(() => {
+    const tick = () => {
+      const el = video.current
+      if (!el) return
+      const q = el.getVideoPlaybackQuality?.()
+      const buffered = el.buffered.length
+        ? Math.max(0, el.buffered.end(el.buffered.length - 1) - el.currentTime)
+        : 0
+      const v = plan.part.streams.find((s) => s.kind === 'video')
+      const a =
+        plan.part.streams.find((s) => s.kind === 'audio' && s.selected) ??
+        plan.part.streams.find((s) => s.kind === 'audio')
+      setStats([
+        `source: ${localUrl ? 'downloaded file (loopback server)' : `${plan.method} · ${plan.protocol}`}`,
+        `container: ${plan.part.container ?? plan.media.container ?? '?'} · ${plan.media.width ?? '?'}x${plan.media.height ?? '?'}`,
+        `video: ${v?.codec ?? plan.media.videoCodec ?? '?'} ${v?.profile ?? ''} ${v?.bitDepth ? `${v.bitDepth}-bit` : ''} ${v?.frameRate ? `${v.frameRate} fps` : ''} ${v?.hdr ?? ''}`.trim(),
+        `audio: ${a?.codec ?? plan.media.audioCodec ?? '?'} ${a?.channels ? `${a.channels}ch` : ''}`.trim(),
+        `decoded: ${el.videoWidth}x${el.videoHeight} · frames ${q?.totalVideoFrames ?? '?'} · dropped ${q?.droppedVideoFrames ?? '?'}`,
+        `buffer ahead: ${buffered.toFixed(1)} s · readyState ${el.readyState} · rate ${el.playbackRate}`,
+      ])
+    }
+    tick()
+    const t = setInterval(tick, 1000)
+    return () => clearInterval(t)
+  }, [video, plan, localUrl])
+  return (
+    <pre
+      className="pointer-events-none absolute left-4 top-20 z-10 max-w-[90vw] whitespace-pre-wrap rounded bg-black/70 p-3 font-mono text-[11px] leading-relaxed text-white/90"
+      data-testid="playback-stats"
+    >
+      {stats.join('\n')}
+    </pre>
   )
 }
 

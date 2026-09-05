@@ -10,6 +10,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.graphics.Color
 import android.view.View
+import android.view.WindowManager
 import android.webkit.WebView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -105,6 +106,18 @@ class PlaguexPlugin(private val activity: Activity) : Plugin(activity) {
         activity.runOnUiThread {
             val window = activity.window
             val controller = WindowInsetsControllerCompat(window, window.decorView)
+            // Immersive video: no inset padding and draw into the display cutout, so the picture
+            // uses the whole panel; normal UI: padded below the bars and clear of the cutout.
+            fitSystemWindows = !args.enabled
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                window.attributes = window.attributes.apply {
+                    layoutInDisplayCutoutMode = if (args.enabled) {
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    } else {
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+                    }
+                }
+            }
             if (args.enabled) {
                 controller.systemBarsBehavior =
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -112,6 +125,7 @@ class PlaguexPlugin(private val activity: Activity) : Plugin(activity) {
             } else {
                 controller.show(WindowInsetsCompat.Type.systemBars())
             }
+            (insetTarget ?: webView)?.let { ViewCompat.requestApplyInsets(it) }
         }
         invoke.resolve()
     }

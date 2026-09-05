@@ -3,7 +3,10 @@ use std::{path::Path, sync::OnceLock, time::Duration};
 use plaguex_mpv::{EndReason, MpvEvent, MpvPlayer, PlayRequest};
 use tokio::sync::{mpsc, Mutex, MutexGuard};
 
-const SAMPLE: &str = "/home/user/dev/plaguex/packages/mock-plex/assets/sample.mp4";
+const SAMPLE: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../packages/mock-plex/assets/sample.mp4"
+);
 
 fn request(start_secs: f64) -> PlayRequest {
     PlayRequest {
