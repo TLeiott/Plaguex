@@ -1,4 +1,4 @@
-import type { DownloadProgress, ExternalPlayerEvent, Platform } from './types'
+import type { DownloadProgress, ExternalPlayerEvent, NativeVideoEvent, Platform } from './types'
 import { createWebPlatform } from './web'
 
 /**
@@ -7,7 +7,7 @@ import { createWebPlatform } from './web'
  */
 export async function createTauriPlatform(): Promise<Platform> {
   const web = createWebPlatform()
-  const { invoke, convertFileSrc } = await import('@tauri-apps/api/core')
+  const { invoke, convertFileSrc, Channel } = await import('@tauri-apps/api/core')
   const { platform: osPlatform } = await import('@tauri-apps/plugin-os')
   const os = osPlatform()
   const kind = os === 'android' ? 'tauri-android' : os === 'linux' ? 'tauri-linux' : 'tauri-other'
@@ -29,6 +29,25 @@ export async function createTauriPlatform(): Promise<Platform> {
         : null,
     shareFile:
       kind === 'tauri-android' ? (file) => invoke('plugin:plaguex-android|share_file', file) : null,
+    nativeVideo:
+      kind === 'tauri-android'
+        ? {
+            load: async (req, onEvent) => {
+              const channel = new Channel<NativeVideoEvent>()
+              channel.onmessage = onEvent
+              await invoke('plugin:plaguex-android|native_load', { req, onEvent: channel })
+              return () => {
+                channel.onmessage = () => undefined
+              }
+            },
+            control: (cmd) =>
+              invoke('plugin:plaguex-android|native_control', {
+                action: cmd.action,
+                value: 'value' in cmd ? cmd.value : null,
+              }),
+            stop: () => invoke('plugin:plaguex-android|native_stop'),
+          }
+        : null,
     externalPlayer:
       kind === 'tauri-linux'
         ? {

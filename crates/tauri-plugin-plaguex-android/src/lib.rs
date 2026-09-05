@@ -1,8 +1,9 @@
 //! Native Android helpers for Plaguex. On every other platform the commands are no-ops so the web
 //! layer can call them unconditionally.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{
+    ipc::Channel,
     plugin::{Builder, TauriPlugin},
     AppHandle, Runtime,
 };
@@ -144,13 +145,98 @@ fn set_fit_system_windows<R: Runtime>(app: AppHandle<R>, enabled: bool) -> Resul
     }
 }
 
+/// Playback request for the in-app native video surface (ExoPlayer). Mirrors the web
+/// `NativePlayRequest`; passed through to Kotlin untouched.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct NativePlayRequest {
+    pub url: String,
+    pub title: String,
+    pub start_secs: f64,
+    pub hls: bool,
+    pub http_headers: std::collections::HashMap<String, String>,
+    pub audio_track: Option<u32>,
+    pub subtitle_track: Option<u32>,
+    pub embedded_subtitle_count: u32,
+    pub subtitle_files: Vec<SubtitleFile>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SubtitleFile {
+    pub url: String,
+    pub mime: String,
+    pub language: String,
+    pub label: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NativeLoadArgs {
+    req: NativePlayRequest,
+    on_event: Channel<serde_json::Value>,
+}
+
+#[derive(Serialize)]
+struct NativeControlArgs {
+    action: String,
+    value: Option<f64>,
+}
+
+/// Starts the native player underneath the (now transparent) webview; events stream on `on_event`.
+#[tauri::command]
+fn native_load<R: Runtime>(
+    app: AppHandle<R>,
+    req: NativePlayRequest,
+    on_event: Channel<serde_json::Value>,
+) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    return call(&app, "nativeLoad", NativeLoadArgs { req, on_event });
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, NativeLoadArgs { req, on_event });
+        Err("native video is only available on Android".into())
+    }
+}
+
+/// `action`: "play" | "pause" | "seek" (value = seconds) | "volume" (value = 0..1).
+#[tauri::command]
+fn native_control<R: Runtime>(
+    app: AppHandle<R>,
+    action: String,
+    value: Option<f64>,
+) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    return call(&app, "nativeControl", NativeControlArgs { action, value });
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, NativeControlArgs { action, value });
+        Ok(())
+    }
+}
+
+/// Releases the native player and restores the opaque webview.
+#[tauri::command]
+fn native_stop<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    return call(&app, "nativeStop", ());
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        Ok(())
+    }
+}
+
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("plaguex-android")
         .invoke_handler(tauri::generate_handler![
             set_orientation,
             set_immersive,
             set_fit_system_windows,
-            share_file
+            share_file,
+            native_load,
+            native_control,
+            native_stop
         ])
         .setup(|_app, _api| {
             #[cfg(target_os = "android")]

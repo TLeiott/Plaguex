@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { Item, PlaybackState } from '@plaguex/plex-api'
 import { activeServer } from '@/plex/api'
+import type { MediaLike } from './nativeVideo'
 
 /**
  * Keeps the server informed about playback. Plex expects a timeline ping roughly every 10 s while
@@ -9,7 +10,7 @@ import { activeServer } from '@/plex/api'
 export function useTimeline(
   item: Item,
   sessionId: string,
-  video: React.RefObject<HTMLVideoElement | null>,
+  video: React.RefObject<MediaLike | null>,
   enabled: boolean,
   /** HLS streams start at the requested offset with currentTime 0; add it back for absolute positions. */
   offsetMs = 0,

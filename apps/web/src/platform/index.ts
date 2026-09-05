@@ -10,6 +10,10 @@ export type {
   ExternalPlayRequest,
   ExternalPlayerEvent,
   ScreenControl,
+  NativeVideoBackend,
+  NativeVideoEvent,
+  NativePlayRequest,
+  NativeControl,
 } from './types'
 
 declare global {

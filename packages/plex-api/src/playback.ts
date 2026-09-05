@@ -15,6 +15,10 @@ export interface PlayerCapabilities {
   maxBitrateKbps?: number
   /** Whether 10-bit HDR video can be shown. If false, HDR sources get transcoded (tone-mapped) by the server. */
   hdr?: boolean
+  /** Native players (ExoPlayer, mpv) render text subtitles embedded in the container themselves. */
+  embeddedSubtitles?: boolean
+  /** Native players can also render image subtitles (PGS, VobSub) without server burn-in. */
+  imageSubtitles?: boolean
 }
 
 export interface PlaybackPrefs {
@@ -61,8 +65,8 @@ export function isImageSubtitle(s: MediaStream): boolean {
  * endpoint starts a full DASH session, so burn-in is the only reliable HTML5 path.
  */
 export function subtitleNeedsBurn(sub: MediaStream, caps: PlayerCapabilities): boolean {
-  if (isImageSubtitle(sub)) return true
-  if (!sub.external) return true
+  if (isImageSubtitle(sub)) return !caps.imageSubtitles
+  if (!sub.external && !caps.embeddedSubtitles) return true
   return !caps.subtitleFormats.includes((sub.codec ?? sub.format ?? '').toLowerCase())
 }
 
@@ -170,7 +174,8 @@ export function planPlayback(i: PlanInput): PlaybackPlan {
     ? part.streams.find((s) => s.id === prefs.subtitleStreamId)
     : undefined
   const subNeedsBurn = sub ? subtitleNeedsBurn(sub, i.caps) : false
-  if (sub && !subNeedsBurn) {
+  // Only external files are served by /library/streams; embedded text is left to native players.
+  if (sub && !subNeedsBurn && sub.external) {
     sidecar = {
       stream: sub,
       url: buildUrl(i.baseUrl, `library/streams/${sub.id}`, {

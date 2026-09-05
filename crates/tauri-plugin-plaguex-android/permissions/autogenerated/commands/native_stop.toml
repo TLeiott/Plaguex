@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-native-stop"
+description = "Enables the native_stop command without any pre-configured scope."
+commands.allow = ["native_stop"]
+
+[[permission]]
+identifier = "deny-native-stop"
+description = "Denies the native_stop command without any pre-configured scope."
+commands.deny = ["native_stop"]

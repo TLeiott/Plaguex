@@ -156,6 +156,15 @@ function SettingsPage() {
             checked={settings.autoPlayNext}
             onChange={(v) => updateSettings({ autoPlayNext: v })}
           />
+          {platform().nativeVideo ? (
+            <Toggle
+              id="nativePlayer"
+              label="Native video player"
+              description="Renders video with the system's hardware player (ExoPlayer) for smooth frame pacing, embedded subtitles and HDR. Turn off to use the web player."
+              checked={settings.nativePlayer}
+              onChange={(v) => updateSettings({ nativePlayer: v })}
+            />
+          ) : null}
           {platform().externalPlayer ? (
             <Toggle
               id="externalPlayer"

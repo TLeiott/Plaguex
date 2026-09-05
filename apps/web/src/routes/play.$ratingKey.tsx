@@ -105,7 +105,7 @@ function PlayPage() {
     )
   }
   return (
-    <div className="h-full w-full bg-black">
+    <div className="h-full w-full bg-black" data-play-root>
       <Player
         key={`${ratingKey}-${startMs}`}
         item={item.data}

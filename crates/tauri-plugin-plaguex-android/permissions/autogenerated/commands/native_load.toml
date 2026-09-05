@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-native-load"
+description = "Enables the native_load command without any pre-configured scope."
+commands.allow = ["native_load"]
+
+[[permission]]
+identifier = "deny-native-load"
+description = "Denies the native_load command without any pre-configured scope."
+commands.deny = ["native_load"]

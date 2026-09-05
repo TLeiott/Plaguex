@@ -159,6 +159,35 @@ describe('playback selection', () => {
       'embedded subtitle ass cannot be extracted client-side',
     ])
   })
+
+  it('lets native players direct play embedded and image subtitles', () => {
+    const p = part([
+      stream(1, 'video', 'h264'),
+      stream(2, 'audio', 'aac'),
+      stream(3, 'subtitle', 'ass'),
+      stream(4, 'subtitle', 'pgs'),
+    ])
+    const native = {
+      ...caps,
+      embeddedSubtitles: true,
+      imageSubtitles: true,
+      subtitleFormats: ['ass'],
+    }
+    expect(canDirectPlay(media(p), p, native, { subtitleStreamId: 3 }).ok).toBe(true)
+    expect(canDirectPlay(media(p), p, native, { subtitleStreamId: 4 }).ok).toBe(true)
+    // Embedded text is handled by the player; no sidecar URL must be produced for it.
+    const plan = planPlayback({
+      baseUrl: 'http://plex.test',
+      token: 'tok',
+      client,
+      item: item([media(p)]),
+      caps: native,
+      sessionId: 's',
+      prefs: { subtitleStreamId: 3 },
+    })
+    expect(plan.method).toBe('directplay')
+    expect(plan.sidecarSubtitle).toBeUndefined()
+  })
 })
 
 describe('playback URLs', () => {

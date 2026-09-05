@@ -1,6 +1,6 @@
 ## Default Permission
 
-Allows the app to control screen orientation, system bar insets and immersive mode.
+Allows the app to control screen orientation, system bar insets, immersive mode and the native video player.
 
 #### This default permission set includes the following:
 
@@ -8,6 +8,9 @@ Allows the app to control screen orientation, system bar insets and immersive mo
 - `allow-set-immersive`
 - `allow-set-fit-system-windows`
 - `allow-share-file`
+- `allow-native-load`
+- `allow-native-control`
+- `allow-native-stop`
 
 ## Permission Table
 
@@ -17,6 +20,84 @@ Allows the app to control screen orientation, system bar insets and immersive mo
 <th>Description</th>
 </tr>
 
+
+<tr>
+<td>
+
+`plaguex-android:allow-native-control`
+
+</td>
+<td>
+
+Enables the native_control command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`plaguex-android:deny-native-control`
+
+</td>
+<td>
+
+Denies the native_control command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`plaguex-android:allow-native-load`
+
+</td>
+<td>
+
+Enables the native_load command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`plaguex-android:deny-native-load`
+
+</td>
+<td>
+
+Denies the native_load command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`plaguex-android:allow-native-stop`
+
+</td>
+<td>
+
+Enables the native_stop command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`plaguex-android:deny-native-stop`
+
+</td>
+<td>
+
+Denies the native_stop command without any pre-configured scope.
+
+</td>
+</tr>
 
 <tr>
 <td>

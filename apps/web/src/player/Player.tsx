@@ -22,6 +22,7 @@ import { useSession } from '@/plex/session'
 import { platform } from '@/platform'
 import { buildPlan, defaultTracks, newSessionId, type TrackChoice } from './plan'
 import { useMediaSource } from './useMediaSource'
+import { NativeVideo, type MediaLike } from './nativeVideo'
 import { useTimeline } from './useTimeline'
 import { Button, Spinner } from '@/components/ui'
 import { cx, episodeCode, formatClock } from '@/lib/format'
@@ -38,12 +39,55 @@ interface Props {
 
 const SEEK_STEP = 10
 
+/**
+ * What the native surface (ExoPlayer) decodes and renders itself. Anything it cannot handle
+ * surfaces as a fatal error and falls back to the transcoder like the <video> path does.
+ */
+export const NATIVE_CAPS: PlayerCapabilities = {
+  containers: ['mp4', 'm4v', 'mov', 'mkv', 'webm', 'avi', 'ts', 'mpegts', 'flv', 'ogg', '3gp'],
+  videoCodecs: ['h264', 'hevc', 'av1', 'vp9', 'vp8', 'mpeg4', 'mpeg2video', 'h263'],
+  audioCodecs: [
+    'aac',
+    'ac3',
+    'eac3',
+    'mp3',
+    'mp2',
+    'flac',
+    'opus',
+    'vorbis',
+    'pcm',
+    'dts',
+    'truehd',
+  ],
+  subtitleFormats: [
+    'srt',
+    'subrip',
+    'vtt',
+    'webvtt',
+    'mov_text',
+    'ass',
+    'ssa',
+    'ttml',
+    'pgs',
+    'dvb_subtitle',
+    'vobsub',
+  ],
+  hdr: true,
+  embeddedSubtitles: true,
+  imageSubtitles: true,
+}
+
 export function Player({ item, caps, startMs, next, localUrl }: Props) {
   const navigate = useNavigate()
   const router = useRouter()
   const canGoBack = useCanGoBack()
   const settings = useSession((s) => s.settings)
-  const video = useRef<HTMLVideoElement>(null)
+  // Native surface (Android/ExoPlayer) when available and enabled; the webview's <video> otherwise.
+  const [nativeVideo] = useState(() => {
+    const backend = platform().nativeVideo
+    return backend && settings.nativePlayer ? new NativeVideo(backend) : null
+  })
+  const video = useRef<MediaLike | null>(nativeVideo)
   const root = useRef<HTMLDivElement>(null)
 
   const mediaIndex = 0
@@ -72,7 +116,7 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
       }
       return buildPlan({
         item,
-        caps,
+        caps: nativeVideo ? NATIVE_CAPS : caps,
         tracks,
         startMs: resumeMs,
         sessionId,
@@ -82,9 +126,21 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
     } catch {
       return null
     }
-  }, [item, caps, tracks, resumeMs, sessionId, forceTranscode, localUrl])
+  }, [item, caps, tracks, resumeMs, sessionId, forceTranscode, localUrl, nativeVideo])
 
-  const status = useMediaSource(video, plan, resumeMs / 1000)
+  const nativeTitle =
+    item.type === 'episode' ? `${item.grandparentTitle ?? ''} · ${item.title}` : item.title
+  const nativeOpts = useMemo(
+    () => (nativeVideo ? { tracks, title: nativeTitle } : undefined),
+    [nativeVideo, tracks, nativeTitle],
+  )
+  const status = useMediaSource(video, plan, resumeMs / 1000, nativeOpts)
+  // The picture is composited by the OS underneath the webview: everything above it must be see-through.
+  useEffect(() => {
+    if (!nativeVideo) return
+    document.documentElement.classList.add('plaguex-native-video')
+    return () => document.documentElement.classList.remove('plaguex-native-video')
+  }, [nativeVideo])
   useTimeline(
     item,
     sessionId,
@@ -127,6 +183,7 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
   )
   const [rotated, setRotated] = useState(false)
   const [showStats, setShowStats] = useState(false)
+  const surfaceHole = useRef<HTMLDivElement>(null)
   const native = platform().screen
   const toggleRotate = useCallback(async () => {
     if (rotated) {
@@ -403,14 +460,15 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
     <div
       ref={root}
       className={cx(
-        'relative h-full w-full select-none bg-black text-white',
+        'relative h-full w-full select-none text-white',
+        nativeVideo ? 'bg-transparent' : 'bg-black',
         showControls ? 'cursor-default' : 'cursor-none',
         rotated && !native && !nativeLandscape() && 'plaguex-rotated',
       )}
       data-rotated={rotated || undefined}
       onMouseMove={poke}
       onClick={(e) => {
-        if (e.target !== video.current) return
+        if (e.target !== (nativeVideo ? surfaceHole.current : video.current)) return
         if (touchDevice) {
           // YouTube-style: a tap only reveals/hides the controls; double-tap on the sides seeks.
           const now = Date.now()
@@ -430,28 +488,36 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
         togglePlay()
         poke()
       }}
-      onDoubleClick={(e) => !touchDevice && e.target === video.current && toggleFullscreen()}
+      onDoubleClick={(e) =>
+        !touchDevice &&
+        e.target === (nativeVideo ? surfaceHole.current : video.current) &&
+        toggleFullscreen()
+      }
       data-testid="player"
       data-method={plan?.method}
     >
-      <video
-        ref={video}
-        className="h-full w-full"
-        playsInline
-        crossOrigin="anonymous"
-        preload="auto"
-        data-testid="video"
-      >
-        {plan?.sidecarSubtitle ? (
-          <track
-            key={plan.sidecarSubtitle.stream.id}
-            kind="subtitles"
-            src={plan.sidecarSubtitle.url}
-            default
-            label={plan.sidecarSubtitle.stream.displayTitle}
-          />
-        ) : null}
-      </video>
+      {nativeVideo ? (
+        <div ref={surfaceHole} className="h-full w-full" data-testid="video" data-native="true" />
+      ) : (
+        <video
+          ref={video as React.RefObject<HTMLVideoElement>}
+          className="h-full w-full"
+          playsInline
+          crossOrigin="anonymous"
+          preload="auto"
+          data-testid="video"
+        >
+          {plan?.sidecarSubtitle ? (
+            <track
+              key={plan.sidecarSubtitle.stream.id}
+              kind="subtitles"
+              src={plan.sidecarSubtitle.url}
+              default
+              label={plan.sidecarSubtitle.stream.displayTitle}
+            />
+          ) : null}
+        </video>
+      )}
 
       {touchDevice && showControls && !buffering && status.kind === 'ready' ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-10">
@@ -772,7 +838,7 @@ function PlaybackStats({
   plan,
   localUrl,
 }: {
-  video: React.RefObject<HTMLVideoElement | null>
+  video: React.RefObject<MediaLike | null>
   plan: PlaybackPlan
   localUrl: string | undefined
 }) {
@@ -795,6 +861,7 @@ function PlaybackStats({
         `video: ${v?.codec ?? plan.media.videoCodec ?? '?'} ${v?.profile ?? ''} ${v?.bitDepth ? `${v.bitDepth}-bit` : ''} ${v?.frameRate ? `${v.frameRate} fps` : ''} ${v?.hdr ?? ''}`.trim(),
         `audio: ${a?.codec ?? plan.media.audioCodec ?? '?'} ${a?.channels ? `${a.channels}ch` : ''}`.trim(),
         `decoded: ${el.videoWidth}x${el.videoHeight} · frames ${q?.totalVideoFrames ?? '?'} · dropped ${q?.droppedVideoFrames ?? '?'}`,
+        `renderer: ${el instanceof NativeVideo ? `native (${el.stats.decoder || 'decoder pending'})` : 'webview <video>'}`,
         `buffer ahead: ${buffered.toFixed(1)} s · readyState ${el.readyState} · rate ${el.playbackRate}`,
       ])
     }

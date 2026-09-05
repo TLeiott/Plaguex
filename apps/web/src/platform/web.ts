@@ -22,6 +22,7 @@ export function createWebPlatform(): Platform {
     probeCapabilities: () => Promise.resolve(probeHtml5Capabilities()),
     downloads: null,
     externalPlayer: null,
+    nativeVideo: null,
     shareFile: null,
     screen: null,
     deviceName: () => {

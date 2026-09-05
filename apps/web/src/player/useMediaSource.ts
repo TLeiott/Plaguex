@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type Hls from 'hls.js'
 import type { PlaybackPlan } from '@plaguex/plex-api'
+import { NativeVideo, buildNativeRequest, type MediaLike } from './nativeVideo'
+import type { TrackChoice } from './plan'
 
 export type SourceStatus =
   { kind: 'loading' } | { kind: 'ready' } | { kind: 'error'; message: string; fatal: boolean }
@@ -10,9 +12,11 @@ export type SourceStatus =
  * hls.js unless the browser plays HLS natively (Safari, WebKitGTK).
  */
 export function useMediaSource(
-  video: React.RefObject<HTMLVideoElement | null>,
+  video: React.RefObject<MediaLike | null>,
   plan: PlaybackPlan | null,
   startSeconds: number,
+  /** Needed by the native surface, which selects tracks itself instead of via the plan URL. */
+  native?: { tracks: TrackChoice; title: string },
 ) {
   const [statusFor, setStatusFor] = useState<{ plan: PlaybackPlan | null; status: SourceStatus }>({
     plan,
@@ -37,6 +41,28 @@ export function useMediaSource(
     const onCanPlay = () => setStatus({ kind: 'ready' })
     el.addEventListener('error', onError)
     el.addEventListener('canplay', onCanPlay)
+
+    if (el instanceof NativeVideo) {
+      const req = buildNativeRequest({
+        plan,
+        tracks: native?.tracks ?? {},
+        startSecs: startSeconds,
+        title: native?.title ?? '',
+      })
+      el.load(req).catch((e: unknown) =>
+        setStatus({
+          kind: 'error',
+          message: e instanceof Error ? e.message : String(e),
+          fatal: true,
+        }),
+      )
+      return () => {
+        cancelled = true
+        el.removeEventListener('error', onError)
+        el.removeEventListener('canplay', onCanPlay)
+        void el.unload()
+      }
+    }
 
     const seekToStart = () => {
       if (startSeconds > 0 && plan.protocol === 'file') el.currentTime = startSeconds
@@ -108,7 +134,7 @@ export function useMediaSource(
       el.load()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- setStatus is a stable wrapper around the state setter
-  }, [video, plan, startSeconds])
+  }, [video, plan, startSeconds, native?.tracks, native?.title])
 
   return status
 }

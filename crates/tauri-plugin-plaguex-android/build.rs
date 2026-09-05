@@ -3,6 +3,9 @@ const COMMANDS: &[&str] = &[
     "set_immersive",
     "set_fit_system_windows",
     "share_file",
+    "native_load",
+    "native_control",
+    "native_stop",
 ];
 
 fn main() {

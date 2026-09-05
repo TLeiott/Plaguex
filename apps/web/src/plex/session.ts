@@ -27,6 +27,8 @@ export interface Settings {
   subtitlesOnByDefault: boolean
   /** Prefer an external native player (mpv on Linux) when available. */
   externalPlayer: boolean
+  /** In-app native video surface (ExoPlayer on Android) instead of the webview's <video>. */
+  nativePlayer: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -36,6 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoPlayNext: true,
   subtitlesOnByDefault: false,
   externalPlayer: false,
+  nativePlayer: true,
 }
 
 interface SessionState {

@@ -295,6 +295,42 @@
       "type": "string",
       "oneOf": [
         {
+          "description": "Enables the native_control command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-native-control",
+          "markdownDescription": "Enables the native_control command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the native_control command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-native-control",
+          "markdownDescription": "Denies the native_control command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the native_load command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-native-load",
+          "markdownDescription": "Enables the native_load command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the native_load command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-native-load",
+          "markdownDescription": "Denies the native_load command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the native_stop command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-native-stop",
+          "markdownDescription": "Enables the native_stop command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the native_stop command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-native-stop",
+          "markdownDescription": "Denies the native_stop command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_fit_system_windows command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-fit-system-windows",
@@ -343,10 +379,10 @@
           "markdownDescription": "Denies the share_file command without any pre-configured scope."
         },
         {
-          "description": "Allows the app to control screen orientation, system bar insets and immersive mode.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`",
+          "description": "Allows the app to control screen orientation, system bar insets, immersive mode and the native video player.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`\n- `allow-native-load`\n- `allow-native-control`\n- `allow-native-stop`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Allows the app to control screen orientation, system bar insets and immersive mode.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`"
+          "markdownDescription": "Allows the app to control screen orientation, system bar insets, immersive mode and the native video player.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`\n- `allow-native-load`\n- `allow-native-control`\n- `allow-native-stop`"
         }
       ]
     }

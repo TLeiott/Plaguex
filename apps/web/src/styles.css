@@ -27,6 +27,13 @@
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
   }
+  /* Native video (Android/ExoPlayer) is composited by the OS underneath the webview. */
+  html.plaguex-native-video,
+  html.plaguex-native-video body,
+  html.plaguex-native-video #root,
+  html.plaguex-native-video [data-play-root] {
+    background: transparent !important;
+  }
   :focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;

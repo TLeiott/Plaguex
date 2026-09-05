@@ -21,6 +21,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
+import androidx.media3.common.util.UnstableApi
+import app.tauri.plugin.Channel
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.Plugin
 
@@ -43,6 +45,18 @@ class ShareFileArgs {
 }
 
 @InvokeArg
+class NativeLoadArgs {
+    var req: NativePlayRequestArg = NativePlayRequestArg()
+    lateinit var onEvent: Channel
+}
+
+@InvokeArg
+class NativeControlArgs {
+    var action: String = "pause"
+    var value: Double? = null
+}
+
+@InvokeArg
 class DownloadStateArgs {
     var active: Boolean = false
     var title: String = "Downloading"
@@ -58,12 +72,18 @@ class DownloadStateArgs {
  * WebView by the system bar insets ("content goes below the status bar") and drop the padding only
  * while a video plays in immersive mode.
  */
+@UnstableApi
 @TauriPlugin
 class PlaguexPlugin(private val activity: Activity) : Plugin(activity) {
+    companion object {
+        val BACKGROUND: Int = Color.parseColor("#0B0B0F")
+    }
+
     private var webView: WebView? = null
     private var insetTarget: View? = null
     private var fitSystemWindows = true
-    private val background = Color.parseColor("#0B0B0F")
+    private val background = BACKGROUND
+    private var nativePlayer: NativePlayer? = null
 
     override fun load(webView: WebView) {
         super.load(webView)
@@ -95,6 +115,43 @@ class PlaguexPlugin(private val activity: Activity) : Plugin(activity) {
             }
             ViewCompat.requestApplyInsets(target)
         }
+    }
+
+    override fun onPause() {
+        nativePlayer?.onPause()
+    }
+
+    /** Native ExoPlayer surface under the webview; see NativePlayer. */
+    @Command
+    fun nativeLoad(invoke: Invoke) {
+        val args = invoke.parseArgs(NativeLoadArgs::class.java)
+        val wv = webView
+        if (wv == null) {
+            invoke.reject("webview not ready")
+            return
+        }
+        activity.runOnUiThread {
+            try {
+                val np = nativePlayer ?: NativePlayer(activity, wv).also { nativePlayer = it }
+                np.load(args.req, args.onEvent)
+                invoke.resolve()
+            } catch (e: Exception) {
+                invoke.reject(e.message ?: "native player failed")
+            }
+        }
+    }
+
+    @Command
+    fun nativeControl(invoke: Invoke) {
+        val args = invoke.parseArgs(NativeControlArgs::class.java)
+        activity.runOnUiThread { nativePlayer?.control(args.action, args.value) }
+        invoke.resolve()
+    }
+
+    @Command
+    fun nativeStop(invoke: Invoke) {
+        activity.runOnUiThread { nativePlayer?.stop() }
+        invoke.resolve()
     }
 
     @Command
