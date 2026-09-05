@@ -40,12 +40,20 @@ export class PlexTv {
     return h
   }
 
-  async createPin(): Promise<Pin> {
-    const raw = await requestJson<RawPin>(buildUrl(this.base, 'api/v2/pins', { strong: 'true' }), {
-      method: 'POST',
-      headers: plexHeaders(this.client),
-      ...this.http(),
-    })
+  /**
+   * Create a login PIN. Plain (4-character) PINs work with both the forwarding URL and the manual
+   * plex.tv/link flow; "strong" PINs only work with the URL, leaving no fallback when the browser
+   * cannot be opened.
+   */
+  async createPin(strong = false): Promise<Pin> {
+    const raw = await requestJson<RawPin>(
+      buildUrl(this.base, 'api/v2/pins', { strong: String(strong) }),
+      {
+        method: 'POST',
+        headers: plexHeaders(this.client),
+        ...this.http(),
+      },
+    )
     const params = new URLSearchParams({
       clientID: this.client.clientIdentifier,
       code: raw.code,

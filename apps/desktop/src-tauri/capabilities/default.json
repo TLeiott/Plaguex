@@ -9,6 +9,20 @@
     "core:window:allow-is-fullscreen",
     "core:event:default",
     "os:default",
-    "opener:allow-open-url"
-  ]
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://app.plex.tv/*"
+        },
+        {
+          "url": "https://plex.tv/*"
+        },
+        {
+          "url": "https://*.plex.tv/*"
+        }
+      ]
+    }
+  ],
+  "platforms": ["linux", "android", "windows", "macOS", "iOS"]
 }

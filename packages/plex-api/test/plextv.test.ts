@@ -25,7 +25,7 @@ const json = (value: unknown, status = 200) =>
 const pin: Pin = { id: 12, code: 'ABCD', expiresAt: new Date('2099-01-01'), authUrl: '' }
 
 describe('PlexTv', () => {
-  it('creates a strong PIN with identity headers and an auth URL', async () => {
+  it('creates a plain PIN with identity headers and an auth URL', async () => {
     const fetch = vi.fn((_url: string, _init?: RequestInit) => Promise.resolve(json(rawPin(null))))
     const result = await new PlexTv(client, {
       fetch,
@@ -33,7 +33,7 @@ describe('PlexTv', () => {
       authAppUrl: 'http://auth.test',
     }).createPin()
     const [url, init] = fetch.mock.calls[0] ?? []
-    expect(url).toBe('http://tv.test/api/v2/pins?strong=true')
+    expect(url).toBe('http://tv.test/api/v2/pins?strong=false')
     expect(init?.method).toBe('POST')
     expect(new Headers(init?.headers).get('X-Plex-Client-Identifier')).toBe('cid')
     expect(result.authUrl).toContain('clientID=cid')

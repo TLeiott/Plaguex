@@ -21,6 +21,7 @@ function LoginPage() {
   const [pin, setPin] = useState<Pin | null>(null)
   const [status, setStatus] = useState<'idle' | 'waiting' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [openFailed, setOpenFailed] = useState(false)
   const abort = useRef<AbortController | null>(null)
 
   useEffect(() => () => abort.current?.abort(), [])
@@ -35,7 +36,13 @@ function LoginPage() {
       const tv = plexTv()
       const p = await tv.createPin()
       setPin(p)
-      await platform().openExternal(p.authUrl)
+      // Opening the browser can fail (restricted webview, no browser); the PIN flow still works manually.
+      await platform()
+        .openExternal(p.authUrl)
+        .then(
+          () => setOpenFailed(false),
+          () => setOpenFailed(true),
+        )
       const token = await tv.waitForPin(p, { signal: ac.signal })
       const user = await tv.user(token)
       signIn(token, user)
@@ -80,11 +87,17 @@ function LoginPage() {
         ) : (
           <div className="flex flex-col items-center gap-4 text-center" aria-live="polite">
             <p className="text-sm text-fg-2">
-              Approve this device in the browser window that just opened.
+              {openFailed
+                ? 'Could not open a browser. On any device, go to plex.tv/link and enter this code:'
+                : 'Approve this device in the browser window that just opened.'}
             </p>
             {pin ? (
               <>
-                <p className="text-xs text-fg-3">If nothing opened, visit plex.tv/link and enter</p>
+                {!openFailed ? (
+                  <p className="text-xs text-fg-3">
+                    If nothing opened, visit plex.tv/link and enter
+                  </p>
+                ) : null}
                 <p className="font-mono text-3xl font-bold tracking-[0.3em]" data-testid="pin-code">
                   {pin.code}
                 </p>
