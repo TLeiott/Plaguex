@@ -1,0 +1,21 @@
+{
+  "name": "@plaguex/plex-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Typed, dependency-free client for plex.tv and Plex Media Server",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@plaguex/mock-plex": "workspace:*",
+    "@types/node": "^26.4.1",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.0"
+  }
+}

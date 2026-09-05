@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+  - packages/*
+allowBuilds:
+  esbuild: true
+  '@tauri-apps/cli': true
+  '@swc/core': true
+minimumReleaseAge: 0
