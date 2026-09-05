@@ -7,24 +7,24 @@ downloads, and it only transcodes when your device genuinely cannot play the fil
 
 ## Status
 
-Early development. Web build works against a Plex server; Linux and Android shells via Tauri are in progress.
+**v1.0.0.** Web build verified against a real Plex Media Server; Android app tested on a Galaxy S23 Ultra; Linux desktop app runs with the mpv backend.
 
-| Feature                                                                              | Status                                                                       |
-| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| plex.tv sign-in (PIN flow), server discovery, connection racing                      | ✅                                                                           |
-| Home: continue watching, recently added                                              | ✅                                                                           |
-| Movie and TV libraries, hubs, infinite grid with sort/filter                         | ✅                                                                           |
-| Detail pages, seasons, episodes, mark watched                                        | ✅                                                                           |
-| Search                                                                               | ✅                                                                           |
-| Player: direct play → direct stream → transcode, automatic fallback                  | ✅                                                                           |
-| Audio/subtitle selection persisted to the server                                     | ✅                                                                           |
-| Skip intro / credits markers, next episode autoplay                                  | ✅                                                                           |
-| Keyboard shortcuts                                                                   | ✅                                                                           |
-| Downloads for offline playback (Linux/Android), resumable, no Plex Pass needed       | 🚧 engine + UI done, device verification pending                             |
-| Linux desktop app (Tauri)                                                            | 🚧 builds and runs; mpv playback verified end to end against the mock server |
-| Android app (Tauri)                                                                  | 🚧 APK builds (arm64, unsigned); not yet run on a device                     |
-| Native mpv playback backend on Linux (direct plays everything, all subtitle formats) | ✅ opt-in in Settings                                                        |
-| Music, photos, live TV                                                               | not planned for v1                                                           |
+| Feature                                                                              | Status                                                                             |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| plex.tv sign-in (PIN flow), server discovery, connection racing                      | ✅                                                                                 |
+| Home: continue watching, recently added                                              | ✅                                                                                 |
+| Movie and TV libraries, hubs, infinite grid with sort/filter                         | ✅                                                                                 |
+| Detail pages, seasons, episodes, mark watched                                        | ✅                                                                                 |
+| Search                                                                               | ✅                                                                                 |
+| Player: direct play → direct stream → transcode, automatic fallback                  | ✅                                                                                 |
+| Audio/subtitle selection persisted to the server                                     | ✅                                                                                 |
+| Skip intro / credits markers, next episode autoplay                                  | ✅                                                                                 |
+| Keyboard shortcuts                                                                   | ✅                                                                                 |
+| Downloads for offline playback (Linux/Android), resumable, no Plex Pass needed       | ✅ background downloads, quality chooser, grouped by show/season, offline playback |
+| Linux desktop app (Tauri)                                                            | ✅ runs; mpv backend verified end to end                                           |
+| Android app (Tauri)                                                                  | ✅ tested on device; native rotation, insets, foreground downloads                 |
+| Native mpv playback backend on Linux (direct plays everything, all subtitle formats) | ✅ opt-in in Settings                                                              |
+| Music, photos, live TV                                                               | not planned for v1                                                                 |
 
 ## Repository layout
 
