@@ -25,7 +25,7 @@ const json = (value: unknown, status = 200) =>
 const pin: Pin = { id: 12, code: 'ABCD', expiresAt: new Date('2099-01-01'), authUrl: '' }
 
 describe('PlexTv', () => {
-  it('creates a plain PIN with identity headers and an auth URL', async () => {
+  it('creates a strong PIN with identity headers and an auth URL', async () => {
     const fetch = vi.fn((_url: string, _init?: RequestInit) => Promise.resolve(json(rawPin(null))))
     const result = await new PlexTv(client, {
       fetch,
@@ -33,7 +33,7 @@ describe('PlexTv', () => {
       authAppUrl: 'http://auth.test',
     }).createPin()
     const [url, init] = fetch.mock.calls[0] ?? []
-    expect(url).toBe('http://tv.test/api/v2/pins?strong=false')
+    expect(url).toBe('http://tv.test/api/v2/pins?strong=true')
     expect(init?.method).toBe('POST')
     expect(new Headers(init?.headers).get('X-Plex-Client-Identifier')).toBe('cid')
     expect(result.authUrl).toContain('clientID=cid')
@@ -113,5 +113,39 @@ describe('PlexTv', () => {
       fetch: () => Promise.reject(new Error('offline')),
     })
     await expect(tv.signOut('token')).resolves.toBeUndefined()
+  })
+
+  it('keeps polling through transient errors and fails fast on 404', async () => {
+    let calls = 0
+    const flaky = async (): Promise<Response> => {
+      calls++
+      if (calls === 1) throw new Error('signal is aborted without reason')
+      if (calls === 2) return new Response('busy', { status: 503 })
+      return new Response(
+        JSON.stringify({
+          id: 1,
+          code: 'ABCD',
+          expiresIn: 900,
+          createdAt: '',
+          expiresAt: '',
+          authToken: 'tok',
+          clientIdentifier: 'c',
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      )
+    }
+    const tv = new PlexTv(client, { baseUrl: 'http://tv.test', fetch: flaky })
+    const pin = { id: 1, code: 'ABCD', expiresAt: new Date(Date.now() + 60_000), authUrl: 'x' }
+    await expect(tv.waitForPin(pin, { intervalMs: 0 })).resolves.toBe('tok')
+    expect(calls).toBe(3)
+
+    const gone = new PlexTv(client, {
+      baseUrl: 'http://tv.test',
+      fetch: async () => new Response('nope', { status: 404 }),
+    })
+    await expect(gone.waitForPin(pin, { intervalMs: 0 })).rejects.toThrow('no longer valid')
   })
 })

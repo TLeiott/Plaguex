@@ -1,5 +1,5 @@
 import { plexHeaders, type PlexClientInfo } from './headers'
-import { buildUrl, requestJson, type HttpOptions } from './http'
+import { buildUrl, PlexHttpError, requestJson, type HttpOptions } from './http'
 import { normalizeResource, normalizeUser } from './normalize'
 import type { RawPin, RawPlexUser, RawResource } from './raw'
 import type { PlexUser, ServerResource } from './types'
@@ -41,11 +41,10 @@ export class PlexTv {
   }
 
   /**
-   * Create a login PIN. Plain (4-character) PINs work with both the forwarding URL and the manual
-   * plex.tv/link flow; "strong" PINs only work with the URL, leaving no fallback when the browser
-   * cannot be opened.
+   * Create a login PIN. The app.plex.tv/auth redirect flow requires a "strong" (24-character) PIN;
+   * the manual plex.tv/link flow requires a plain 4-character one. Create the kind you need.
    */
-  async createPin(strong = false): Promise<Pin> {
+  async createPin(strong = true): Promise<Pin> {
     const raw = await requestJson<RawPin>(
       buildUrl(this.base, 'api/v2/pins', { strong: String(strong) }),
       {
@@ -83,16 +82,34 @@ export class PlexTv {
     return raw.authToken ?? null
   }
 
-  /** Polls until the PIN is claimed, expires, or the signal aborts. */
+  /**
+   * Polls until the PIN is claimed, expires, or the signal aborts. Transient failures (timeouts,
+   * offline while the browser is in the foreground, 5xx) are retried until the PIN expires; only a
+   * 404 (PIN gone) fails immediately.
+   */
   async waitForPin(
     pin: Pin,
     { intervalMs = 2000, signal }: { intervalMs?: number; signal?: AbortSignal } = {},
   ): Promise<string> {
+    let lastError: Error | null = null
     while (!signal?.aborted) {
-      if (Date.now() > pin.expiresAt.getTime())
-        throw new Error('Plex PIN expired before it was claimed')
-      const token = await this.checkPin(pin.id)
-      if (token) return token
+      if (Date.now() > pin.expiresAt.getTime()) {
+        throw new Error(
+          lastError
+            ? `Plex PIN expired before it was claimed (last error: ${lastError.message})`
+            : 'Plex PIN expired before it was claimed',
+          lastError ? { cause: lastError } : undefined,
+        )
+      }
+      try {
+        const token = await this.checkPin(pin.id)
+        if (token) return token
+        lastError = null
+      } catch (e) {
+        if (e instanceof PlexHttpError && e.status === 404)
+          throw new Error('Plex PIN is no longer valid', { cause: e })
+        lastError = e instanceof Error ? e : new Error(String(e))
+      }
       await new Promise((r) => setTimeout(r, intervalMs))
     }
     throw new Error('PIN polling aborted')

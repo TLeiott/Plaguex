@@ -34,15 +34,21 @@ function LoginPage() {
     setStatus('waiting')
     try {
       const tv = plexTv()
-      const p = await tv.createPin()
+      // The redirect flow needs a strong PIN. If the browser cannot be opened (restricted webview,
+      // no browser), fall back to a plain PIN the user types at plex.tv/link on any device.
+      let p = await tv.createPin(true)
       setPin(p)
-      // Opening the browser can fail (restricted webview, no browser); the PIN flow still works manually.
-      await platform()
+      const opened = await platform()
         .openExternal(p.authUrl)
         .then(
-          () => setOpenFailed(false),
-          () => setOpenFailed(true),
+          () => true,
+          () => false,
         )
+      setOpenFailed(!opened)
+      if (!opened) {
+        p = await tv.createPin(false)
+        setPin(p)
+      }
       const token = await tv.waitForPin(p, { signal: ac.signal })
       const user = await tv.user(token)
       signIn(token, user)
@@ -93,14 +99,18 @@ function LoginPage() {
             </p>
             {pin ? (
               <>
-                {!openFailed ? (
-                  <p className="text-xs text-fg-3">
-                    If nothing opened, visit plex.tv/link and enter
+                {openFailed ? (
+                  <p
+                    className="font-mono text-3xl font-bold tracking-[0.3em]"
+                    data-testid="pin-code"
+                  >
+                    {pin.code}
                   </p>
-                ) : null}
-                <p className="font-mono text-3xl font-bold tracking-[0.3em]" data-testid="pin-code">
-                  {pin.code}
-                </p>
+                ) : (
+                  <p className="text-xs text-fg-3" data-testid="pin-code">
+                    Signed in already? It can take a few seconds to register here.
+                  </p>
+                )}
                 <Button
                   size="sm"
                   variant="ghost"
