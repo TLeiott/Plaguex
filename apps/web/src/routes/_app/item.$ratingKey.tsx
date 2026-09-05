@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Play, Check, Eye, EyeOff, Download, Star, ChevronLeft } from 'lucide-react'
+import { Play, Check, Eye, EyeOff, Star, ChevronLeft } from 'lucide-react'
 import type { Item } from '@plaguex/plex-api'
 import { q, useWatchedMutation } from '@/plex/queries'
 import { PlexImage } from '@/components/PlexImage'
@@ -9,8 +9,7 @@ import { ItemCard } from '@/components/ItemCard'
 import { Badge, Button, buttonClass, ErrorState, PageSpinner, ProgressBar } from '@/components/ui'
 import { MediaInfo } from '@/components/MediaInfo'
 import { cx, episodeCode, formatDuration, progressFraction, resolutionLabel } from '@/lib/format'
-import { isTauri } from '@/platform'
-import { useDownloads } from '@/downloads/store'
+import { DownloadButton, DownloadSummaryBadge } from '@/components/DownloadButton'
 
 export const Route = createFileRoute('/_app/item/$ratingKey')({
   loader: ({ context, params }) => context.queryClient.ensureQueryData(q.item(params.ratingKey)),
@@ -73,19 +72,6 @@ function WatchedButton({ item }: { item: Item }) {
     >
       {watched ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
       {watched ? 'Mark unwatched' : 'Mark watched'}
-    </Button>
-  )
-}
-
-function DownloadButton({ item }: { item: Item }) {
-  const start = useDownloads((s) => s.start)
-  const entry = useDownloads((s) => s.items[item.ratingKey])
-  if (!isTauri()) return null
-  if (entry?.status === 'done') return <Badge tone="accent">Downloaded</Badge>
-  if (entry && entry.status !== 'error') return <Badge>Downloading…</Badge>
-  return (
-    <Button variant="ghost" onClick={() => void start(item)} data-testid="download">
-      <Download className="size-5" /> Download
     </Button>
   )
 }
@@ -215,6 +201,7 @@ function Row({ k, v }: { k: string; v: string }) {
 
 function ShowPage({ show }: { show: Item }) {
   const seasons = useQuery(q.children(show.ratingKey))
+  const allEps = useQuery(q.allEpisodes(show.ratingKey))
   const onDeck = useQuery({
     ...q.allEpisodes(show.ratingKey),
     select: (eps) =>
@@ -256,6 +243,8 @@ function ShowPage({ show }: { show: Item }) {
               </Link>
             ) : null}
             <WatchedButton item={show} />
+            <DownloadButton item={show} />
+            {allEps.data ? <DownloadSummaryBadge items={allEps.data} /> : null}
           </div>
           {show.summary ? <p className="max-w-3xl leading-relaxed">{show.summary}</p> : null}
           {show.genres.length ? (
@@ -307,6 +296,8 @@ function SeasonPage({ season }: { season: Item }) {
             <div className="mt-2 flex items-center gap-2 text-sm text-fg-2">
               {season.leafCount ? <span>{season.leafCount} episodes</span> : null}
               <WatchedButton item={season} />
+              <DownloadButton item={season} size="sm" />
+              {episodes.data ? <DownloadSummaryBadge items={episodes.data} /> : null}
             </div>
           </div>
         </div>
@@ -356,6 +347,7 @@ function SeasonPage({ season }: { season: Item }) {
                     <span className="ml-auto shrink-0 text-xs text-fg-3">
                       {formatDuration(ep.durationMs, { compact: true })}
                     </span>
+                    <DownloadButton item={ep} size="icon" className="h-8 w-8 shrink-0" />
                   </div>
                   <button
                     onClick={() => setExpanded(open ? null : ep.ratingKey)}

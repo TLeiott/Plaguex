@@ -20,7 +20,7 @@ export function Hero({ item }: { item: Item }) {
       : ''
   return (
     <section
-      className="relative isolate h-[42vh] min-h-[280px] w-full overflow-hidden md:h-[52vh]"
+      className="relative isolate h-[34vh] min-h-[240px] w-full overflow-hidden md:h-[52vh]"
       aria-label="Resume playback"
       data-testid="hero"
     >

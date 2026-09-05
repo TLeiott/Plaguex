@@ -58,7 +58,7 @@ export function ItemCard({ item, shape = 'poster', showContext = true, className
   return (
     <Link
       {...itemHref(item)}
-      className={cx('group block w-full shrink-0 outline-none', className)}
+      className={cx('group block shrink-0 outline-none', className)}
       data-testid="item-card"
       data-rating-key={item.ratingKey}
       aria-label={subtitle ? `${title}, ${subtitle}` : title}

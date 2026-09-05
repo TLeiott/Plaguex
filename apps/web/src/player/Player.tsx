@@ -155,7 +155,11 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
   }, [])
 
   useEffect(() => {
-    const onFs = () => setFullscreen(Boolean(document.fullscreenElement))
+    const onFs = () => {
+      const fs = Boolean(document.fullscreenElement)
+      setFullscreen(fs)
+      if (!fs) unlockOrientation()
+    }
     document.addEventListener('fullscreenchange', onFs)
     return () => document.removeEventListener('fullscreenchange', onFs)
   }, [])
@@ -190,8 +194,14 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
   const seekBy = useCallback((delta: number) => seekTo(absTime + delta), [seekTo, absTime])
 
   const toggleFullscreen = useCallback(() => {
-    if (document.fullscreenElement) void document.exitFullscreen()
-    else void root.current?.requestFullscreen().catch(() => undefined)
+    if (document.fullscreenElement) {
+      void document.exitFullscreen()
+      return
+    }
+    void root.current
+      ?.requestFullscreen()
+      .then(() => lockLandscape())
+      .catch(() => undefined)
   }, [])
 
   const goBack = useCallback(() => {
@@ -489,6 +499,8 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
               : plan.method === 'directstream'
                 ? 'Direct stream'
                 : 'Transcode'}
+            {plan.media.height ? ` · ${plan.media.height}p` : ''}
+            {plan.media.bitrate ? ` · ${(plan.media.bitrate / 1000).toFixed(1)} Mbps` : ''}
           </span>
         ) : null}
       </div>
@@ -654,6 +666,19 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
       </div>
     </div>
   )
+}
+
+/** Phones: rotate to landscape while fullscreen. No-op where the Screen Orientation API is missing. */
+function lockLandscape() {
+  const o = screen.orientation as ScreenOrientation & { lock?: (t: string) => Promise<void> }
+  return o.lock?.('landscape').catch(() => undefined)
+}
+function unlockOrientation() {
+  try {
+    screen.orientation.unlock()
+  } catch {
+    /* not supported or not locked */
+  }
 }
 
 function defaultSubtitle(item: Item, mediaIndex: number): MediaStream | undefined {

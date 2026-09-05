@@ -15,6 +15,7 @@ export interface DownloadEntry extends DownloadProgress {
 interface DownloadsState {
   items: Record<string, DownloadEntry>
   start: (item: Item) => Promise<void>
+  startMany: (items: Item[]) => Promise<void>
   pause: (id: string) => Promise<void>
   resume: (id: string) => Promise<void>
   remove: (id: string) => Promise<void>
@@ -61,6 +62,9 @@ export const useDownloads = create<DownloadsState>()(
           fileName,
           ...(part.size ? { totalBytes: part.size } : {}),
         })
+      },
+      startMany: async (items) => {
+        for (const item of items) await get().start(item)
       },
       pause: (id) => platform().downloads?.pause(id) ?? Promise.resolve(),
       resume: (id) => platform().downloads?.resume(id) ?? Promise.resolve(),
