@@ -1,7 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Check, Download, Loader2 } from 'lucide-react'
-import type { Item } from '@plaguex/plex-api'
+import type { DownloadChoice, Item } from '@plaguex/plex-api'
+import { useSession } from '@/plex/session'
+import { choiceFromSetting } from '@/downloads/chooser'
+import { DownloadChooser } from './DownloadChooser'
 import { q } from '@/plex/queries'
 import { useDownloads } from '@/downloads/store'
 import { downloadable, summarize } from '@/downloads/select'
@@ -24,6 +27,8 @@ export function DownloadButton({ item, size = 'md', className }: Props) {
   const entries = useDownloads((s) => s.items)
   const startMany = useDownloads((s) => s.startMany)
   const [busy, setBusy] = useState(false)
+  const [pending, setPending] = useState<Item[] | null>(null)
+  const downloadQuality = useSession((s) => s.settings.downloadQuality)
   if (!isTauri()) return null
 
   const isContainer = item.type === 'show' || item.type === 'season'
@@ -42,11 +47,32 @@ export function DownloadButton({ item, size = 'md', className }: Props) {
             item.type === 'show' ? q.allEpisodes(item.ratingKey) : q.children(item.ratingKey),
           )
         : [item]
-      await startMany(downloadable(leaves).filter((l) => entries[l.ratingKey]?.status !== 'done'))
+      const todo = downloadable(leaves).filter((l) => entries[l.ratingKey]?.status !== 'done')
+      if (todo.length === 0) return
+      const preset = choiceFromSetting(downloadQuality, todo)
+      if (preset) await startMany(todo, preset)
+      else setPending(todo)
     } finally {
       setBusy(false)
     }
   }
+  const confirm = async (choice: DownloadChoice) => {
+    const todo = pending ?? []
+    setPending(null)
+    await startMany(todo, choice)
+  }
+  const chooser = pending ? (
+    <DownloadChooser
+      items={pending}
+      title={
+        isContainer && item.type === 'season' && item.parentTitle
+          ? `${item.parentTitle} · ${item.title}`
+          : item.title
+      }
+      onPick={(c) => void confirm(c)}
+      onClose={() => setPending(null)}
+    />
+  ) : null
 
   const iconOnly = size === 'icon'
   if (known?.status === 'done') {
@@ -74,19 +100,22 @@ export function DownloadButton({ item, size = 'md', className }: Props) {
     )
   }
   return (
-    <Button
-      variant="ghost"
-      size={size}
-      onClick={() => void start()}
-      loading={busy}
-      aria-label={label}
-      title={label}
-      data-testid="download"
-      {...(className ? { className } : {})}
-    >
-      {busy ? null : <Download className="size-5" />}
-      {iconOnly ? null : label}
-    </Button>
+    <>
+      {chooser}
+      <Button
+        variant="ghost"
+        size={size}
+        onClick={() => void start()}
+        loading={busy}
+        aria-label={label}
+        title={label}
+        data-testid="download"
+        {...(className ? { className } : {})}
+      >
+        {busy ? null : <Download className="size-5" />}
+        {iconOnly ? null : label}
+      </Button>
+    </>
   )
 }
 

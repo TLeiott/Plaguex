@@ -16,7 +16,6 @@ Allows the app to control screen orientation, system bar insets and immersive mo
 <th>Description</th>
 </tr>
 
-
 <tr>
 <td>
 

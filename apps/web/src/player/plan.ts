@@ -44,9 +44,14 @@ export function buildPlan(o: {
 }): PlaybackPlan {
   const { activeServer, clientIdentifier, settings } = useSession.getState()
   if (!activeServer) throw new Error('No active server')
-  const caps: PlayerCapabilities = o.forceTranscode
+  const base: PlayerCapabilities = o.forceTranscode
     ? { ...o.caps, containers: [], videoCodecs: o.caps.videoCodecs }
     : o.caps
+  // User cap on resolution (e.g. 1440p on a phone): sources above it go through the transcoder.
+  const capHeight = settings.maxHeight
+  const caps: PlayerCapabilities = capHeight
+    ? { ...base, maxHeight: Math.min(base.maxHeight ?? Infinity, capHeight) }
+    : base
   const isLocal =
     /^(https?:\/\/)?(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(
       activeServer.baseUrl,

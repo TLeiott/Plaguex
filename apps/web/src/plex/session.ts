@@ -15,6 +15,10 @@ export interface ActiveServer {
 export interface Settings {
   /** undefined = original quality */
   maxBitrateKbps?: number | undefined
+  /** Cap on video height (e.g. 1440 for phones that cannot show 4K). undefined = no cap. */
+  maxHeight?: number | undefined
+  /** 'ask' shows the chooser; 'original' downloads the source file; otherwise a preset id. */
+  downloadQuality: string
   autoSkipIntro: boolean
   autoSkipCredits: boolean
   autoPlayNext: boolean
@@ -26,6 +30,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  downloadQuality: 'ask',
   autoSkipIntro: false,
   autoSkipCredits: false,
   autoPlayNext: true,

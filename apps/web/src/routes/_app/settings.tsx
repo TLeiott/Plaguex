@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import type { PlayerCapabilities } from '@plaguex/plex-api'
+import { DOWNLOAD_PRESETS, type PlayerCapabilities } from '@plaguex/plex-api'
 import { useSession, type Settings } from '@/plex/session'
 import { plexTv } from '@/plex/api'
 import { Button } from '@/components/ui'
@@ -88,6 +88,52 @@ function SettingsPage() {
               {QUALITIES.map((o) => (
                 <option key={o.label} value={o.kbps ?? ''}>
                   {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center justify-between gap-4 py-3">
+            <span>
+              <span className="block font-medium">Maximum resolution</span>
+              <span className="block text-sm text-fg-3">
+                Sources above this are downscaled by the server.
+              </span>
+            </span>
+            <select
+              value={settings.maxHeight ?? ''}
+              onChange={(e) =>
+                updateSettings(
+                  e.target.value ? { maxHeight: Number(e.target.value) } : { maxHeight: undefined },
+                )
+              }
+              className="h-9 max-w-[50%] rounded-lg border border-line bg-bg-3 px-2 text-sm"
+              data-testid="setting-max-height"
+            >
+              <option value="">Original</option>
+              <option value="2160">4K (2160p)</option>
+              <option value="1440">1440p</option>
+              <option value="1080">1080p</option>
+              <option value="720">720p</option>
+            </select>
+          </label>
+          <label className="flex items-center justify-between gap-4 py-3">
+            <span>
+              <span className="block font-medium">Download quality</span>
+              <span className="block text-sm text-fg-3">
+                Original keeps the server file; presets re-encode to save space.
+              </span>
+            </span>
+            <select
+              value={settings.downloadQuality}
+              onChange={(e) => updateSettings({ downloadQuality: e.target.value })}
+              className="h-9 max-w-[50%] rounded-lg border border-line bg-bg-3 px-2 text-sm"
+              data-testid="setting-download-quality"
+            >
+              <option value="ask">Ask every time</option>
+              <option value="original">Original file</option>
+              {DOWNLOAD_PRESETS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
                 </option>
               ))}
             </select>
