@@ -1,12 +1,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Theme.plaguex" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Plaguex: content below the status bar, dark system bars. Edge-to-edge is enforced on
-             Android 15+ for targetSdk 35+; opt out so system icons never overlap tappable UI. -->
-        <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>
         <item name="android:statusBarColor">#0b0b0f</item>
         <item name="android:navigationBarColor">#0b0b0f</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
     </style>
 </resources>

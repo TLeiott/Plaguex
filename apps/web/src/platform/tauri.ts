@@ -20,6 +20,13 @@ export async function createTauriPlatform(): Promise<Platform> {
     },
     deviceName: () => (kind === 'tauri-android' ? 'Plaguex Android' : 'Plaguex Desktop'),
     platformName: () => (kind === 'tauri-android' ? 'Android' : 'Chrome'),
+    screen:
+      kind === 'tauri-android'
+        ? {
+            setOrientation: (mode) => invoke('plugin:plaguex-android|set_orientation', { mode }),
+            setImmersive: (enabled) => invoke('plugin:plaguex-android|set_immersive', { enabled }),
+          }
+        : null,
     externalPlayer:
       kind === 'tauri-linux'
         ? {
@@ -51,6 +58,9 @@ export async function createTauriPlatform(): Promise<Platform> {
       remove: (id) => invoke('download_remove', { id }),
       list: () => invoke('download_list'),
       playbackUrl: async (id) => {
+        // Loopback server with proper Range support; asset:// is the fallback for older builds.
+        const url = await invoke<string | null>('download_local_url', { id })
+        if (url) return url
         const path = await invoke<string | null>('download_local_path', { id })
         return path ? convertFileSrc(path) : null
       },

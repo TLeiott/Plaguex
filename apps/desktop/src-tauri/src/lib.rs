@@ -11,6 +11,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_plaguex_android::init())
         .manage(mpv::Mpv::default())
         .setup(|app| {
             let dir = app
@@ -29,6 +30,7 @@ pub fn run() {
             downloads::download_remove,
             downloads::download_list,
             downloads::download_local_path,
+            downloads::download_local_url,
             mpv::mpv_available,
             mpv::mpv_play,
             mpv::mpv_stop,

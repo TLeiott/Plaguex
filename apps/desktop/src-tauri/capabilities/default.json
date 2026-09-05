@@ -4,6 +4,7 @@
   "description": "Capabilities for the main window",
   "windows": ["main"],
   "permissions": [
+    "plaguex-android:default",
     "core:default",
     "core:window:allow-set-fullscreen",
     "core:window:allow-is-fullscreen",

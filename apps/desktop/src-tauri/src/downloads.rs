@@ -3,11 +3,14 @@
 
 use std::{path::PathBuf, sync::Arc};
 
-use plaguex_downloader::{DownloadManager, DownloadRequest, Progress};
+use plaguex_downloader::{DownloadManager, DownloadRequest, LocalFileServer, Progress, Status};
 use serde::Deserialize;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 
 pub struct Downloads(pub Arc<DownloadManager>);
+/// Loopback HTTP server that streams finished downloads to the webview with Range support
+/// (the asset protocol fails on Android when playback resumes mid-file).
+pub struct Files(pub Arc<LocalFileServer>);
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -19,12 +22,21 @@ pub struct StartRequest {
 }
 
 pub async fn init<R: Runtime>(app: &AppHandle<R>, dir: PathBuf) -> anyhow::Result<()> {
+    let server = LocalFileServer::start().await?;
     let emitter = app.clone();
+    let files = Arc::clone(&server);
     let manager = DownloadManager::new(dir, move |p: Progress| {
+        if p.status == Status::Done {
+            if let Some(path) = &p.local_uri {
+                files.register(&p.id, PathBuf::from(path));
+            }
+        }
         let _ = emitter.emit("download://progress", &p);
     })
     .await?;
+    manager.register_completed(&server).await;
     app.manage(Downloads(manager));
+    app.manage(Files(server));
     Ok(())
 }
 
@@ -57,8 +69,19 @@ pub async fn download_resume(state: State<'_, Downloads>, id: String) -> Result<
 }
 
 #[tauri::command]
-pub async fn download_remove(state: State<'_, Downloads>, id: String) -> Result<(), String> {
+pub async fn download_remove(
+    state: State<'_, Downloads>,
+    files: State<'_, Files>,
+    id: String,
+) -> Result<(), String> {
+    files.0.unregister(&id);
     state.0.remove(&id).await.map_err(err)
+}
+
+/// http://127.0.0.1:<port>/files/<id> for a finished download, or null.
+#[tauri::command]
+pub fn download_local_url(files: State<'_, Files>, id: String) -> Option<String> {
+    files.0.url_for(&id)
 }
 
 #[tauri::command]

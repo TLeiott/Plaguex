@@ -20,6 +20,7 @@ tauri-plugin-os = "2.3"
 tauri-plugin-opener = "2.5"
 plaguex-downloader = { path = "../../../crates/downloader" }
 plaguex-mpv = { path = "../../../crates/mpv" }
+tauri-plugin-plaguex-android = { path = "../../../crates/tauri-plugin-plaguex-android" }
 tokio = { version = "1", features = ["sync"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

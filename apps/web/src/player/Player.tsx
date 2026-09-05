@@ -19,6 +19,7 @@ import type { Item, MediaStream, PlaybackPlan, PlayerCapabilities } from '@plagu
 import { activeServer } from '@/plex/api'
 import { q } from '@/plex/queries'
 import { useSession } from '@/plex/session'
+import { platform } from '@/platform'
 import { buildPlan, defaultTracks, newSessionId, type TrackChoice } from './plan'
 import { useMediaSource } from './useMediaSource'
 import { useTimeline } from './useTimeline'
@@ -125,17 +126,28 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
     () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
   )
   const [rotated, setRotated] = useState(false)
+  const native = platform().screen
   const toggleRotate = useCallback(async () => {
     if (rotated) {
-      unlockOrientation()
+      if (native) await native.setOrientation('auto').catch(() => undefined)
+      else unlockOrientation()
       setRotated(false)
       return
     }
-    // Prefer a real orientation lock; the CSS fallback kicks in when the webview refuses it.
-    await lockLandscape()
+    // Real device rotation where the shell provides it; otherwise the browser lock or CSS fallback.
+    if (native) await native.setOrientation('landscape').catch(() => undefined)
+    else await lockLandscape()
     setRotated(true)
-  }, [rotated])
-  useEffect(() => () => unlockOrientation(), [])
+  }, [rotated, native])
+  // Immersive playback: hide system bars for the whole session, restore everything on exit.
+  useEffect(() => {
+    void native?.setImmersive(true).catch(() => undefined)
+    return () => {
+      void native?.setImmersive(false).catch(() => undefined)
+      void native?.setOrientation('auto').catch(() => undefined)
+      unlockOrientation()
+    }
+  }, [native])
   const [ended, setEnded] = useState(false)
 
   useEffect(() => {
@@ -263,6 +275,7 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
 
   // ---- controls visibility ----
   const [controlsVisible, setControlsVisible] = useState(true)
+  const lastTap = useRef(0)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [menu, setMenu] = useState<'none' | 'tracks'>('none')
   const poke = useCallback(() => {
@@ -391,17 +404,32 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
       className={cx(
         'relative h-full w-full select-none bg-black text-white',
         showControls ? 'cursor-default' : 'cursor-none',
-        rotated && !nativeLandscape() && 'plaguex-rotated',
+        rotated && !native && !nativeLandscape() && 'plaguex-rotated',
       )}
       data-rotated={rotated || undefined}
       onMouseMove={poke}
       onClick={(e) => {
-        if (e.target === video.current) {
-          togglePlay()
-          poke()
+        if (e.target !== video.current) return
+        if (touchDevice) {
+          // YouTube-style: a tap only reveals/hides the controls; double-tap on the sides seeks.
+          const now = Date.now()
+          const x = e.clientX / window.innerWidth
+          if (now - lastTap.current < 300) {
+            lastTap.current = 0
+            if (x < 0.33) seekBy(-SEEK_STEP)
+            else if (x > 0.67) seekBy(SEEK_STEP)
+            poke()
+            return
+          }
+          lastTap.current = now
+          if (controlsVisible) setControlsVisible(false)
+          else poke()
+          return
         }
+        togglePlay()
+        poke()
       }}
-      onDoubleClick={(e) => e.target === video.current && toggleFullscreen()}
+      onDoubleClick={(e) => !touchDevice && e.target === video.current && toggleFullscreen()}
       data-testid="player"
       data-method={plan?.method}
     >
@@ -424,7 +452,38 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
         ) : null}
       </video>
 
-      {!playing && !buffering && !ended && status.kind === 'ready' ? (
+      {touchDevice && showControls && !buffering && status.kind === 'ready' ? (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-10">
+          <button
+            onClick={() => seekBy(-SEEK_STEP)}
+            className="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-black/50 text-white"
+            aria-label="Back 10 seconds"
+          >
+            <span className="text-sm font-bold">-10</span>
+          </button>
+          <button
+            onClick={togglePlay}
+            className="pointer-events-auto flex size-20 items-center justify-center rounded-full bg-white/90 text-black shadow-2xl"
+            aria-label={playing ? 'Pause' : 'Play'}
+            data-testid="center-play"
+          >
+            {playing ? (
+              <Pause className="size-9 fill-current" />
+            ) : (
+              <Play className="size-9 fill-current" />
+            )}
+          </button>
+          <button
+            onClick={() => seekBy(SEEK_STEP)}
+            className="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-black/50 text-white"
+            aria-label="Forward 10 seconds"
+          >
+            <span className="text-sm font-bold">+10</span>
+          </button>
+        </div>
+      ) : null}
+
+      {!touchDevice && !playing && !buffering && !ended && status.kind === 'ready' ? (
         <button
           onClick={togglePlay}
           className="absolute left-1/2 top-1/2 flex size-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-black shadow-2xl transition-transform hover:scale-105"

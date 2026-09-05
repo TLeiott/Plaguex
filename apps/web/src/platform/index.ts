@@ -9,6 +9,7 @@ export type {
   ExternalPlayer,
   ExternalPlayRequest,
   ExternalPlayerEvent,
+  ScreenControl,
 } from './types'
 
 declare global {

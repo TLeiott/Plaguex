@@ -17,6 +17,10 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
+mod serve;
+
+pub use serve::LocalFileServer;
+
 #[derive(Clone, Debug)]
 pub struct DownloadRequest {
     pub id: String,
@@ -315,6 +319,25 @@ impl DownloadManager {
         let entry = entries.get(id)?;
         (entry.manifest.status == Status::Done)
             .then(|| self.root_dir.join(&entry.manifest.file_name))
+    }
+
+    pub async fn register_completed(&self, server: &LocalFileServer) {
+        let completed = {
+            let entries = self.entries.lock().await;
+            entries
+                .values()
+                .filter(|entry| entry.manifest.status == Status::Done)
+                .map(|entry| {
+                    (
+                        entry.manifest.id.clone(),
+                        self.root_dir.join(&entry.manifest.file_name),
+                    )
+                })
+                .collect::<Vec<_>>()
+        };
+        for (id, path) in completed {
+            server.register(&id, path);
+        }
     }
 
     fn spawn_worker(

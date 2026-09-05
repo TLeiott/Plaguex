@@ -52,6 +52,12 @@ export interface ExternalPlayer {
   subscribe(cb: (e: ExternalPlayerEvent) => void): () => void
 }
 
+/** Native screen control (Android): real orientation lock and immersive playback. */
+export interface ScreenControl {
+  setOrientation(mode: 'landscape' | 'portrait' | 'auto'): Promise<void>
+  setImmersive(enabled: boolean): Promise<void>
+}
+
 export interface Platform {
   kind: PlatformKind
   /** Persistent key/value storage for settings and session. */
@@ -65,6 +71,7 @@ export interface Platform {
   probeCapabilities(): Promise<PlayerCapabilities>
   downloads: DownloadManager | null
   externalPlayer: ExternalPlayer | null
+  screen: ScreenControl | null
   /** Human readable, sent as X-Plex-Device-Name */
   deviceName(): string
   platformName(): string

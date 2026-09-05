@@ -44,4 +44,19 @@ test.describe('mobile layout', () => {
     await rotate.tap()
     await expect(page.getByTestId('player')).toHaveAttribute('data-rotated', 'true')
   })
+
+  test('tapping the video toggles controls without pausing; centre button pauses', async ({
+    page,
+  }) => {
+    await page.goto('/play/101')
+    const video = page.getByTestId('video')
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.paused)).toBe(true)
+    await video.tap()
+    await page.waitForTimeout(400)
+    expect(await video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(false)
+    const center = page.getByTestId('center-play')
+    await expect(center).toBeVisible()
+    await center.tap()
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true)
+  })
 })
