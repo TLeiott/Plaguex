@@ -27,6 +27,8 @@ export async function createTauriPlatform(): Promise<Platform> {
             setImmersive: (enabled) => invoke('plugin:plaguex-android|set_immersive', { enabled }),
           }
         : null,
+    shareFile:
+      kind === 'tauri-android' ? (file) => invoke('plugin:plaguex-android|share_file', file) : null,
     externalPlayer:
       kind === 'tauri-linux'
         ? {

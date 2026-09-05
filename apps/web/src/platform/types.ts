@@ -71,6 +71,10 @@ export interface Platform {
   probeCapabilities(): Promise<PlayerCapabilities>
   downloads: DownloadManager | null
   externalPlayer: ExternalPlayer | null
+  /** Native share sheet for a generated text file (Android). null = not available. */
+  shareFile:
+    | ((file: { name: string; mime: string; content: string; subject: string }) => Promise<void>)
+    | null
   screen: ScreenControl | null
   /** Human readable, sent as X-Plex-Device-Name */
   deviceName(): string

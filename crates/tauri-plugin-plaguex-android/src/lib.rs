@@ -23,6 +23,45 @@ struct EnabledArgs {
     enabled: bool,
 }
 
+#[derive(Serialize)]
+struct ShareFileArgs {
+    name: String,
+    mime: String,
+    content: String,
+    subject: String,
+}
+
+/// Writes text to a cache file and opens the platform share sheet (Android only).
+#[tauri::command]
+async fn share_file<R: Runtime>(
+    app: AppHandle<R>,
+    name: String,
+    mime: String,
+    content: String,
+    subject: String,
+) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        app.state::<Native<R>>()
+            .0
+            .run_mobile_plugin::<()>(
+                "shareFile",
+                ShareFileArgs {
+                    name,
+                    mime,
+                    content,
+                    subject,
+                },
+            )
+            .map_err(|e| e.to_string())
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, name, mime, content, subject);
+        Err("sharing is only available on Android".into())
+    }
+}
+
 /// Aggregate download state shown in the Android foreground-service notification.
 #[derive(Serialize, Clone, Debug)]
 pub struct DownloadState {
@@ -110,7 +149,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .invoke_handler(tauri::generate_handler![
             set_orientation,
             set_immersive,
-            set_fit_system_windows
+            set_fit_system_windows,
+            share_file
         ])
         .setup(|_app, _api| {
             #[cfg(target_os = "android")]

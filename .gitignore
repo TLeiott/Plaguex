@@ -21,3 +21,9 @@ apps/desktop/src-tauri/gen/android/local.properties
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Android library build output (plugin)
+crates/**/android/build/
+crates/**/android/.gradle/
+crates/**/android/local.properties
+crates/**/android/.tauri/

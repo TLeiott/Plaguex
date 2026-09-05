@@ -1,4 +1,5 @@
-const COMMANDS: &[&str] = &["set_orientation", "set_immersive", "set_fit_system_windows"];
+const COMMANDS: &[&str] = &["set_orientation", "set_immersive", "set_fit_system_windows",
+    "share_file"];
 
 fn main() {
     tauri_plugin::Builder::new(COMMANDS)

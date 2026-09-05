@@ -2,4 +2,5 @@
 
 [default]
 description = "Allows the app to control screen orientation, system bar insets and immersive mode."
-permissions = ["allow-set-orientation", "allow-set-immersive", "allow-set-fit-system-windows"]
+permissions = ["allow-set-orientation", "allow-set-immersive", "allow-set-fit-system-windows",
+  "allow-share-file"]

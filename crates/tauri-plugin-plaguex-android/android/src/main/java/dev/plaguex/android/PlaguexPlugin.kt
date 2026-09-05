@@ -8,6 +8,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import java.io.File
 import android.graphics.Color
 import android.view.View
 import android.view.WindowManager
@@ -30,6 +32,14 @@ class OrientationArgs {
 @InvokeArg
 class EnabledArgs {
     var enabled: Boolean = true
+}
+
+@InvokeArg
+class ShareFileArgs {
+    var name: String = "plaguex-report.txt"
+    var mime: String = "text/plain"
+    var content: String = ""
+    var subject: String = "Plaguex report"
 }
 
 @InvokeArg
@@ -176,6 +186,30 @@ class PlaguexPlugin(private val activity: Activity) : Plugin(activity) {
         ) == PackageManager.PERMISSION_GRANTED
         if (!granted) {
             ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 4712)
+        }
+    }
+
+    /** Writes `content` to the app cache and opens the system share sheet for it. */
+    @Command
+    fun shareFile(invoke: Invoke) {
+        val args = invoke.parseArgs(ShareFileArgs::class.java)
+        try {
+            val dir = File(activity.cacheDir, "share").apply { mkdirs() }
+            val file = File(dir, args.name.replace(Regex("[^A-Za-z0-9._-]"), "_"))
+            file.writeText(args.content)
+            val uri = FileProvider.getUriForFile(
+                activity, "${activity.packageName}.plaguex.fileprovider", file
+            )
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = args.mime
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, args.subject)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            activity.startActivity(Intent.createChooser(send, args.subject))
+            invoke.resolve()
+        } catch (e: Exception) {
+            invoke.reject(e.message ?: "share failed")
         }
     }
 }

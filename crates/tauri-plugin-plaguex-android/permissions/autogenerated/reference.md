@@ -7,6 +7,7 @@ Allows the app to control screen orientation, system bar insets and immersive mo
 - `allow-set-orientation`
 - `allow-set-immersive`
 - `allow-set-fit-system-windows`
+- `allow-share-file`
 
 ## Permission Table
 
@@ -91,6 +92,32 @@ Enables the set_orientation command without any pre-configured scope.
 <td>
 
 Denies the set_orientation command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`plaguex-android:allow-share-file`
+
+</td>
+<td>
+
+Enables the share_file command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`plaguex-android:deny-share-file`
+
+</td>
+<td>
+
+Denies the share_file command without any pre-configured scope.
 
 </td>
 </tr>

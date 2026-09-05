@@ -331,10 +331,22 @@
           "markdownDescription": "Denies the set_orientation command without any pre-configured scope."
         },
         {
-          "description": "Allows the app to control screen orientation, system bar insets and immersive mode.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`",
+          "description": "Enables the share_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-share-file",
+          "markdownDescription": "Enables the share_file command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the share_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-share-file",
+          "markdownDescription": "Denies the share_file command without any pre-configured scope."
+        },
+        {
+          "description": "Allows the app to control screen orientation, system bar insets and immersive mode.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Allows the app to control screen orientation, system bar insets and immersive mode.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`"
+          "markdownDescription": "Allows the app to control screen orientation, system bar insets and immersive mode.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`"
         }
       ]
     }

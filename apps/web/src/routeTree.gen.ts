@@ -13,6 +13,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ServersRouteImport } from './routes/servers'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppDiagnosticsRouteImport } from './routes/_app/diagnostics'
 import { Route as AppDownloadsRouteImport } from './routes/_app/downloads'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
@@ -37,6 +38,11 @@ const ServersRoute = ServersRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDiagnosticsRoute = AppDiagnosticsRouteImport.update({
+  id: '/diagnostics',
+  path: '/diagnostics',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDownloadsRoute = AppDownloadsRouteImport.update({
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/servers': typeof ServersRoute
+  '/diagnostics': typeof AppDiagnosticsRoute
   '/downloads': typeof AppDownloadsRoute
   '/search': typeof AppSearchRoute
   '/settings': typeof AppSettingsRoute
@@ -84,6 +91,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/servers': typeof ServersRoute
+  '/diagnostics': typeof AppDiagnosticsRoute
   '/downloads': typeof AppDownloadsRoute
   '/search': typeof AppSearchRoute
   '/settings': typeof AppSettingsRoute
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/servers': typeof ServersRoute
+  '/_app/diagnostics': typeof AppDiagnosticsRoute
   '/_app/downloads': typeof AppDownloadsRoute
   '/_app/search': typeof AppSearchRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/servers'
+    | '/diagnostics'
     | '/downloads'
     | '/search'
     | '/settings'
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/servers'
+    | '/diagnostics'
     | '/downloads'
     | '/search'
     | '/settings'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/servers'
+    | '/_app/diagnostics'
     | '/_app/downloads'
     | '/_app/search'
     | '/_app/settings'
@@ -177,6 +189,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/diagnostics': {
+      id: '/_app/diagnostics'
+      path: '/diagnostics'
+      fullPath: '/diagnostics'
+      preLoaderRoute: typeof AppDiagnosticsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/downloads': {
@@ -225,6 +244,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppDiagnosticsRoute: typeof AppDiagnosticsRoute
   AppDownloadsRoute: typeof AppDownloadsRoute
   AppSearchRoute: typeof AppSearchRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -234,6 +254,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppDiagnosticsRoute: AppDiagnosticsRoute,
   AppDownloadsRoute: AppDownloadsRoute,
   AppSearchRoute: AppSearchRoute,
   AppSettingsRoute: AppSettingsRoute,

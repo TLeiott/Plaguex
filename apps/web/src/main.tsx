@@ -6,7 +6,10 @@ import { PlexHttpError } from '@plaguex/plex-api'
 import { routeTree } from './routeTree.gen'
 import { getPlatform } from './platform'
 import { useSession } from './plex/session'
+import { installLogCapture } from './diagnostics/log'
 import './styles.css'
+
+installLogCapture()
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -101,4 +101,25 @@ test.describe('browsing', () => {
     await page.getByTestId('offline-banner').getByRole('button', { name: 'Retry' }).click()
     await expect(page.getByTestId('offline-banner')).toBeHidden()
   })
+
+  test('diagnostics benchmark runs every check and a playback probe, and produces a report', async ({
+    page,
+  }) => {
+    await page.goto('/settings')
+    await page.getByTestId('open-diagnostics').click()
+    await expect(page).toHaveURL(/\/diagnostics/)
+    await page.goto('/diagnostics?seconds=3')
+    await page.getByTestId('run-benchmark').click()
+    const steps = page.getByTestId('benchmark-steps')
+    await expect(steps).toBeVisible({ timeout: 60_000 })
+    await expect(steps.locator('li')).toHaveCount(11)
+    await expect(steps.getByText('fail', { exact: true })).toHaveCount(0)
+    const probe = page.getByTestId('playback-probe').first()
+    await expect(probe).toBeVisible()
+    await expect(probe).toContainText('Stream:')
+    await expect(probe).not.toContainText('never')
+    await page.getByText('Full report').click()
+    await expect(page.getByTestId('report-text')).toContainText('## Playback probes')
+    await expect(page.getByTestId('share-report')).toBeVisible()
+  })
 })

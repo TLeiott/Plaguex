@@ -1,9 +1,9 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { DOWNLOAD_PRESETS, type PlayerCapabilities } from '@plaguex/plex-api'
 import { useSession, type Settings } from '@/plex/session'
 import { plexTv } from '@/plex/api'
-import { Button } from '@/components/ui'
+import { Button, buttonClass } from '@/components/ui'
 import { platform } from '@/platform'
 import { APP_VERSION } from '@/plex/client-info'
 
@@ -195,6 +195,23 @@ function SettingsPage() {
               <dd>{caps.hdr ? 'yes' : 'no (server tone-maps)'}</dd>
             </dl>
           ) : null}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-fg-3">Debug</h2>
+        <div className="rounded-card border border-line bg-bg-2 p-4 text-sm">
+          <p className="text-fg-2">
+            Runs every part of the app against your server and device (connections, library, images,
+            downloads, playback with stutter measurements) and produces a report you can share.
+          </p>
+          <Link
+            to="/diagnostics"
+            className={`${buttonClass('secondary', 'md')} mt-3`}
+            data-testid="open-diagnostics"
+          >
+            Diagnostics &amp; benchmark
+          </Link>
         </div>
       </section>
 
