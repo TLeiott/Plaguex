@@ -9,22 +9,22 @@ downloads, and it only transcodes when your device genuinely cannot play the fil
 
 Early development. Web build works against a Plex server; Linux and Android shells via Tauri are in progress.
 
-| Feature                                                             | Status             |
-| ------------------------------------------------------------------- | ------------------ |
-| plex.tv sign-in (PIN flow), server discovery, connection racing     | ✅                 |
-| Home: continue watching, recently added                             | ✅                 |
-| Movie and TV libraries, hubs, infinite grid with sort/filter        | ✅                 |
-| Detail pages, seasons, episodes, mark watched                       | ✅                 |
-| Search                                                              | ✅                 |
-| Player: direct play → direct stream → transcode, automatic fallback | ✅                 |
-| Audio/subtitle selection persisted to the server                    | ✅                 |
-| Skip intro / credits markers, next episode autoplay                 | ✅                 |
-| Keyboard shortcuts                                                  | ✅                 |
-| Downloads for offline playback (Linux/Android)                      | 🚧                 |
-| Linux desktop app (Tauri)                                           | 🚧                 |
-| Android app (Tauri)                                                 | 🚧                 |
-| Native mpv playback backend on Linux                                | planned            |
-| Music, photos, live TV                                              | not planned for v1 |
+| Feature                                                                        | Status                                                           |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| plex.tv sign-in (PIN flow), server discovery, connection racing                | ✅                                                               |
+| Home: continue watching, recently added                                        | ✅                                                               |
+| Movie and TV libraries, hubs, infinite grid with sort/filter                   | ✅                                                               |
+| Detail pages, seasons, episodes, mark watched                                  | ✅                                                               |
+| Search                                                                         | ✅                                                               |
+| Player: direct play → direct stream → transcode, automatic fallback            | ✅                                                               |
+| Audio/subtitle selection persisted to the server                               | ✅                                                               |
+| Skip intro / credits markers, next episode autoplay                            | ✅                                                               |
+| Keyboard shortcuts                                                             | ✅                                                               |
+| Downloads for offline playback (Linux/Android), resumable, no Plex Pass needed | 🚧 engine + UI done, device verification pending                 |
+| Linux desktop app (Tauri)                                                      | 🚧 scaffolded, unverified (needs WebKitGTK on the build machine) |
+| Android app (Tauri)                                                            | 🚧 APK builds (arm64, unsigned); not yet run on a device         |
+| Native mpv playback backend on Linux                                           | planned                                                          |
+| Music, photos, live TV                                                         | not planned for v1                                               |
 
 ## Repository layout
 
