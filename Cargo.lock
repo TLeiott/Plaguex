@@ -2692,12 +2692,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "plaguex-downloader",
+ "plaguex-mpv",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-opener",
  "tauri-plugin-os",
+ "tokio",
 ]
 
 [[package]]
@@ -2713,6 +2715,17 @@ dependencies = [
  "thiserror 2.0.20",
  "tokio",
  "tokio-util",
+ "tracing",
+]
+
+[[package]]
+name = "plaguex-mpv"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "tokio",
  "tracing",
 ]
 

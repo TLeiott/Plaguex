@@ -2,6 +2,7 @@
 //! browser cannot do: resumable downloads to disk and serving them back for offline playback.
 
 mod downloads;
+mod mpv;
 
 use tauri::Manager;
 
@@ -10,6 +11,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_opener::init())
+        .manage(mpv::Mpv::default())
         .setup(|app| {
             let dir = app
                 .path()
@@ -27,6 +29,11 @@ pub fn run() {
             downloads::download_remove,
             downloads::download_list,
             downloads::download_local_path,
+            mpv::mpv_available,
+            mpv::mpv_play,
+            mpv::mpv_stop,
+            mpv::mpv_pause,
+            mpv::mpv_seek,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

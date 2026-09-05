@@ -21,6 +21,7 @@ export function createWebPlatform(): Platform {
     },
     probeCapabilities: () => Promise.resolve(probeHtml5Capabilities()),
     downloads: null,
+    externalPlayer: null,
     deviceName: () => {
       const ua = navigator.userAgent
       const browser = /Firefox/.test(ua)

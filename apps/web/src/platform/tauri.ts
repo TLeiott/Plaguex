@@ -1,4 +1,4 @@
-import type { DownloadProgress, Platform } from './types'
+import type { DownloadProgress, ExternalPlayerEvent, Platform } from './types'
 import { createWebPlatform } from './web'
 
 /**
@@ -20,6 +20,30 @@ export async function createTauriPlatform(): Promise<Platform> {
     },
     deviceName: () => (kind === 'tauri-android' ? 'Plaguex Android' : 'Plaguex Desktop'),
     platformName: () => (kind === 'tauri-android' ? 'Android' : 'Chrome'),
+    externalPlayer:
+      kind === 'tauri-linux'
+        ? {
+            available: () => invoke<boolean>('mpv_available'),
+            play: (req, sessionId) => invoke('mpv_play', { req, sessionId }),
+            stop: (sessionId) => invoke('mpv_stop', { sessionId: sessionId ?? null }),
+            pause: (paused) => invoke('mpv_pause', { paused }),
+            seek: (secs) => invoke('mpv_seek', { secs }),
+            subscribe: (cb) => {
+              let unlisten: (() => void) | null = null
+              void import('@tauri-apps/api/event').then(({ listen }) =>
+                listen<{ sessionId: string; event: Omit<ExternalPlayerEvent, 'sessionId'> }>(
+                  'mpv://event',
+                  (e) =>
+                    cb({
+                      sessionId: e.payload.sessionId,
+                      ...e.payload.event,
+                    } as ExternalPlayerEvent),
+                ).then((u) => (unlisten = u)),
+              )
+              return () => unlisten?.()
+            },
+          }
+        : null,
     downloads: {
       start: (req) => invoke('download_start', { req }),
       pause: (id) => invoke('download_pause', { id }),

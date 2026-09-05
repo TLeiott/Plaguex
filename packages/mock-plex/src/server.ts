@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { basename } from 'node:path'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { logger } from 'hono/logger'
 import { createFixtures, type Fixtures, type Media, type Metadata, type Part } from './fixtures'
 import { mediaPath, mediaResponse } from './media'
 
@@ -83,6 +84,7 @@ export function createMockPlex(opts: MockPlexOptions = {}): { app: Hono; state: 
   const pins = new Map<number, PinState>()
   let nextPinId = 1000
 
+  if (process.env.MOCK_LOG) app.use('*', logger())
   // Real PMS and plex.tv answer CORS preflights for X-Plex-* headers; browsers need this to talk to us directly.
   app.use(
     '*',

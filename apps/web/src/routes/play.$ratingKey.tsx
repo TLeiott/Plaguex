@@ -7,6 +7,7 @@ import { q } from '@/plex/queries'
 import { useSession } from '@/plex/session'
 import { platform } from '@/platform'
 import { Player, useNextEpisode } from '@/player/Player'
+import { ExternalSession } from '@/player/ExternalSession'
 import { ErrorState, PageSpinner } from '@/components/ui'
 
 export const Route = createFileRoute('/play/$ratingKey')({
@@ -25,6 +26,16 @@ function PlayPage() {
   const { restart, offline } = Route.useSearch()
   const item = useQuery(q.item(ratingKey))
   const [caps, setCaps] = useState<PlayerCapabilities | null>(null)
+  const externalPref = useSession((s) => s.settings.externalPlayer)
+  const [useExternal, setUseExternal] = useState<boolean | null>(null)
+  useEffect(() => {
+    const ext = platform().externalPlayer
+    if (!externalPref || !ext || offline) {
+      setUseExternal(false)
+      return
+    }
+    void ext.available().then(setUseExternal, () => setUseExternal(false))
+  }, [externalPref, offline])
   // undefined = still resolving the local file; null = play from the server
   const [localUrl, setLocalUrl] = useState<string | null | undefined>(offline ? undefined : null)
   useEffect(() => {
@@ -56,7 +67,7 @@ function PlayPage() {
     },
   )
 
-  if (item.isPending || !caps || localUrl === undefined)
+  if (item.isPending || !caps || localUrl === undefined || useExternal === null)
     return (
       <div className="h-full bg-black">
         <PageSpinner />
@@ -64,6 +75,13 @@ function PlayPage() {
     )
   if (item.isError) return <ErrorState error={item.error} retry={() => item.refetch()} />
   const startMs = restart ? 0 : (item.data.viewOffsetMs ?? 0)
+  if (useExternal) {
+    return (
+      <div className="h-full w-full bg-black">
+        <ExternalSession key={ratingKey} item={item.data} startMs={startMs} next={next} />
+      </div>
+    )
+  }
   return (
     <div className="h-full w-full bg-black">
       <Player

@@ -1,7 +1,15 @@
 import type { Platform } from './types'
 import { createWebPlatform } from './web'
 
-export type { Platform, DownloadManager, DownloadProgress, PlatformKind } from './types'
+export type {
+  Platform,
+  DownloadManager,
+  DownloadProgress,
+  PlatformKind,
+  ExternalPlayer,
+  ExternalPlayRequest,
+  ExternalPlayerEvent,
+} from './types'
 
 declare global {
   interface Window {

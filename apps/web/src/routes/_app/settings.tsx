@@ -110,6 +110,15 @@ function SettingsPage() {
             checked={settings.autoPlayNext}
             onChange={(v) => updateSettings({ autoPlayNext: v })}
           />
+          {platform().externalPlayer ? (
+            <Toggle
+              id="externalPlayer"
+              label="Play with mpv"
+              description="Direct plays every file and renders all subtitle formats natively. Opens in its own window."
+              checked={settings.externalPlayer}
+              onChange={(v) => updateSettings({ externalPlayer: v })}
+            />
+          ) : null}
           <Toggle
             id="subtitlesOnByDefault"
             label="Subtitles on by default"
