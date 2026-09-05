@@ -86,6 +86,13 @@ pnpm --filter @plaguex/desktop android:init   # once: generates the Gradle proje
 pnpm --filter @plaguex/desktop android:build  # APK in apps/desktop/src-tauri/gen/android/app/build/outputs
 ```
 
+### Offline
+
+Downloaded items stay playable without the server: the Downloads tab and its Play buttons work
+offline, the app shows a "Can't reach <server>" banner instead of an error page, and progress is
+reported once the server is reachable again. Offline playback uses the original file, so it depends
+on the device being able to decode it (the native Android player, planned, removes that limit).
+
 ### mpv on Linux
 
 With mpv installed, enable **Play with mpv** in Settings. Plaguex then hands the original file to an

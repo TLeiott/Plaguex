@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import type { LibraryType } from '@plaguex/plex-api'
 import { useSession } from '@/plex/session'
+import { OfflineBanner } from '@/components/OfflineBanner'
 import { useLibraries } from '@/plex/queries'
 import { cx } from '@/lib/format'
 import { isTauri } from '@/platform'
@@ -99,6 +100,13 @@ function AppLayout() {
 
       {/* Content */}
       <main className="min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0" id="main">
+        {libraries.isError ? (
+          <OfflineBanner
+            error={libraries.error}
+            retry={() => void libraries.refetch()}
+            showDownloads={showDownloads}
+          />
+        ) : null}
         <Outlet />
       </main>
 

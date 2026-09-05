@@ -33,4 +33,15 @@ test.describe('mobile layout', () => {
     const hero = await page.getByTestId('hero').boundingBox()
     expect(hero!.height).toBeLessThan(viewport.height * 0.45)
   })
+
+  test('player offers rotate instead of fullscreen on phones', async ({ page }) => {
+    await page.goto('/play/101')
+    await expect(page.getByTestId('player')).toBeVisible()
+    await page.getByTestId('player').tap()
+    await expect(page.getByTestId('fullscreen')).toHaveCount(0)
+    const rotate = page.getByTestId('rotate')
+    await expect(rotate).toBeVisible()
+    await rotate.tap()
+    await expect(page.getByTestId('player')).toHaveAttribute('data-rotated', 'true')
+  })
 })

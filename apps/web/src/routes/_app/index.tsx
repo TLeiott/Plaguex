@@ -6,7 +6,8 @@ import { PageSpinner, ErrorState } from '@/components/ui'
 import { q } from '@/plex/queries'
 
 export const Route = createFileRoute('/_app/')({
-  loader: ({ context }) => context.queryClient.ensureQueryData(q.libraries()),
+  // Prefetch only: never block rendering on the network (offline mode relies on this).
+  loader: ({ context }) => context.queryClient.prefetchQuery(q.libraries()),
   component: HomePage,
 })
 
@@ -30,7 +31,16 @@ function HomePage() {
       {videoLibs.map((l, i) => {
         const r = recent[i]
         return r?.data && r.data.length > 0 ? (
-          <Shelf key={l.id} title={`Recently added in ${l.title}`} items={r.data} />
+          <Shelf
+            key={l.id}
+            title={`Recently added in ${l.title}`}
+            items={r.data}
+            link={{
+              to: '/library/$libraryId',
+              params: { libraryId: l.id },
+              search: { view: 'all', sort: 'addedAt:desc' },
+            }}
+          />
         ) : null
       })}
     </div>

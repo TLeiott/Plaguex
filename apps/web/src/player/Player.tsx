@@ -8,6 +8,7 @@ import {
   Minimize,
   Pause,
   Play,
+  RotateCw,
   SkipForward,
   Volume2,
   VolumeX,
@@ -119,6 +120,22 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
   const [volume, setVolume] = useState(1)
   const [muted, setMuted] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
+  // Phones: the webview already fills the screen, so offer rotation instead of fullscreen.
+  const [touchDevice] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
+  )
+  const [rotated, setRotated] = useState(false)
+  const toggleRotate = useCallback(async () => {
+    if (rotated) {
+      unlockOrientation()
+      setRotated(false)
+      return
+    }
+    // Prefer a real orientation lock; the CSS fallback kicks in when the webview refuses it.
+    await lockLandscape()
+    setRotated(true)
+  }, [rotated])
+  useEffect(() => () => unlockOrientation(), [])
   const [ended, setEnded] = useState(false)
 
   useEffect(() => {
@@ -374,7 +391,9 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
       className={cx(
         'relative h-full w-full select-none bg-black text-white',
         showControls ? 'cursor-default' : 'cursor-none',
+        rotated && !nativeLandscape() && 'plaguex-rotated',
       )}
+      data-rotated={rotated || undefined}
       onMouseMove={poke}
       onClick={(e) => {
         if (e.target === video.current) {
@@ -494,11 +513,13 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
             title={plan.reasons.join('\n')}
             data-testid="play-method"
           >
-            {plan.method === 'directplay'
-              ? 'Direct play'
-              : plan.method === 'directstream'
-                ? 'Direct stream'
-                : 'Transcode'}
+            {localUrl
+              ? 'Downloaded file'
+              : plan.method === 'directplay'
+                ? 'Direct play'
+                : plan.method === 'directstream'
+                  ? 'Direct stream'
+                  : 'Transcode'}
             {plan.media.height ? ` · ${plan.media.height}p` : ''}
             {plan.media.bitrate ? ` · ${(plan.media.bitrate / 1000).toFixed(1)} Mbps` : ''}
           </span>
@@ -653,25 +674,47 @@ export function Player({ item, caps, startMs, next, localUrl }: Props) {
               ) : null}
             </div>
           ) : null}
-          <Button
-            size="icon"
-            variant="ghost"
-            className="text-white hover:bg-white/10 hover:text-white"
-            onClick={toggleFullscreen}
-            aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-          >
-            {fullscreen ? <Minimize className="size-6" /> : <Maximize className="size-6" />}
-          </Button>
+          {touchDevice ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white hover:bg-white/10 hover:text-white"
+              onClick={() => void toggleRotate()}
+              aria-label={rotated ? 'Back to portrait' : 'Rotate to landscape'}
+              data-testid="rotate"
+            >
+              <RotateCw className={cx('size-6 transition-transform', rotated && 'rotate-90')} />
+            </Button>
+          ) : (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white hover:bg-white/10 hover:text-white"
+              onClick={toggleFullscreen}
+              aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+              data-testid="fullscreen"
+            >
+              {fullscreen ? <Minimize className="size-6" /> : <Maximize className="size-6" />}
+            </Button>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
-/** Phones: rotate to landscape while fullscreen. No-op where the Screen Orientation API is missing. */
-function lockLandscape() {
+/** Phones: rotate to landscape. Resolves true when the platform honoured the lock. */
+function lockLandscape(): Promise<boolean> {
   const o = screen.orientation as ScreenOrientation & { lock?: (t: string) => Promise<void> }
-  return o.lock?.('landscape').catch(() => undefined)
+  if (!o.lock) return Promise.resolve(false)
+  return o.lock('landscape').then(
+    () => true,
+    () => false,
+  )
+}
+/** True when the screen is physically landscape (native lock worked or the user rotated). */
+function nativeLandscape(): boolean {
+  return typeof window !== 'undefined' && window.innerWidth > window.innerHeight
 }
 function unlockOrientation() {
   try {

@@ -80,4 +80,25 @@ test.describe('browsing', () => {
     await expect(page.getByTestId('setting-autoSkipIntro')).toBeChecked()
     await expect(page.getByTestId('setting-quality')).toHaveValue('8000')
   })
+
+  test('recently added shelf title links to the full library listing', async ({ page }) => {
+    await page.getByTestId('shelf-title-link').first().click()
+    await expect(page).toHaveURL(/\/library\/1\?.*view=all/)
+    await expect(page.getByTestId('item-grid')).toBeVisible()
+  })
+
+  test('shows an offline banner when the server is unreachable and keeps the shell usable', async ({
+    page,
+  }) => {
+    await page.route('**/127.0.0.1:32499/**', (route) => route.abort('connectionrefused'))
+    await page.goto('/settings')
+    await page.getByRole('link', { name: 'Home', exact: true }).first().click()
+    await expect(page.getByTestId('offline-banner')).toBeVisible()
+    await expect(
+      page.getByTestId('settings-page').or(page.getByRole('alert')).first(),
+    ).toBeVisible()
+    await page.unroute('**/127.0.0.1:32499/**')
+    await page.getByTestId('offline-banner').getByRole('button', { name: 'Retry' }).click()
+    await expect(page.getByTestId('offline-banner')).toBeHidden()
+  })
 })

@@ -12,7 +12,7 @@ import { cx, episodeCode, formatDuration, progressFraction, resolutionLabel } fr
 import { DownloadButton, DownloadSummaryBadge } from '@/components/DownloadButton'
 
 export const Route = createFileRoute('/_app/item/$ratingKey')({
-  loader: ({ context, params }) => context.queryClient.ensureQueryData(q.item(params.ratingKey)),
+  loader: ({ context, params }) => context.queryClient.prefetchQuery(q.item(params.ratingKey)),
   component: ItemPage,
 })
 

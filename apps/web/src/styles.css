@@ -56,3 +56,15 @@
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
 }
+
+/* Fallback landscape for webviews that refuse screen.orientation.lock(): rotate the whole player. */
+.plaguex-rotated {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vh;
+  height: 100vw;
+  transform: translate(100vw, 0) rotate(90deg);
+  transform-origin: top left;
+  z-index: 50;
+}

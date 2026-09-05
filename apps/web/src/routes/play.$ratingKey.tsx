@@ -2,13 +2,14 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
-import type { PlayerCapabilities } from '@plaguex/plex-api'
+import type { Item, PlayerCapabilities } from '@plaguex/plex-api'
 import { q } from '@/plex/queries'
 import { useSession } from '@/plex/session'
 import { platform } from '@/platform'
 import { Player, useNextEpisode } from '@/player/Player'
 import { ExternalSession } from '@/player/ExternalSession'
 import { ErrorState, PageSpinner } from '@/components/ui'
+import { useDownloads } from '@/downloads/store'
 
 export const Route = createFileRoute('/play/$ratingKey')({
   validateSearch: z.object({ restart: z.boolean().optional(), offline: z.boolean().optional() }),
@@ -17,14 +18,26 @@ export const Route = createFileRoute('/play/$ratingKey')({
     if (!s.accountToken) throw redirect({ to: '/login' })
     if (!s.activeServer) throw redirect({ to: '/servers' })
   },
-  loader: ({ context, params }) => context.queryClient.ensureQueryData(q.item(params.ratingKey)),
+  loader: ({ context, params }) => context.queryClient.prefetchQuery(q.item(params.ratingKey)),
   component: PlayPage,
 })
 
 function PlayPage() {
   const { ratingKey } = Route.useParams()
   const { restart, offline } = Route.useSearch()
-  const item = useQuery(q.item(ratingKey))
+  // Offline: the downloaded entry carries the full item, so no request to the server is needed.
+  const downloaded = useDownloads((s) => s.items[ratingKey])
+  const itemQuery = useQuery({ ...q.item(ratingKey), enabled: !(offline && downloaded) })
+  const item =
+    offline && downloaded
+      ? {
+          data: downloaded.item,
+          isPending: false,
+          isError: false as const,
+          error: null,
+          refetch: itemQuery.refetch,
+        }
+      : itemQuery
   const [caps, setCaps] = useState<PlayerCapabilities | null>(null)
   const externalPref = useSession((s) => s.settings.externalPlayer)
   const [useExternal, setUseExternal] = useState<boolean | null>(null)
@@ -50,7 +63,8 @@ function PlayPage() {
     }
     void dm.playbackUrl(ratingKey).then((u) => setLocalUrl(u ?? null))
   }, [offline, ratingKey])
-  const next = useNextEpisode(
+  const downloadedAll = useDownloads((s) => s.items)
+  const onlineNext = useNextEpisode(
     item.data ?? {
       ratingKey,
       key: '',
@@ -66,6 +80,8 @@ function PlayPage() {
       chapters: [],
     },
   )
+  const next =
+    offline && downloaded ? nextDownloadedEpisode(downloaded.item, downloadedAll) : onlineNext
 
   if (item.isPending || !caps || localUrl === undefined || useExternal === null)
     return (
@@ -73,7 +89,13 @@ function PlayPage() {
         <PageSpinner />
       </div>
     )
-  if (item.isError) return <ErrorState error={item.error} retry={() => item.refetch()} />
+  if (item.isError || !item.data)
+    return (
+      <ErrorState
+        error={item.error ?? new Error('Item not found')}
+        retry={() => void item.refetch()}
+      />
+    )
   const startMs = restart ? 0 : (item.data.viewOffsetMs ?? 0)
   if (useExternal) {
     return (
@@ -94,4 +116,23 @@ function PlayPage() {
       />
     </div>
   )
+}
+
+/** Next downloaded episode of the same show, in season/episode order. */
+function nextDownloadedEpisode(
+  current: Item,
+  entries: Record<string, { item: Item; status: string }>,
+): Item | null {
+  if (current.type !== 'episode' || !current.grandparentRatingKey) return null
+  const eps = Object.values(entries)
+    .filter(
+      (e) =>
+        e.status === 'done' &&
+        e.item.type === 'episode' &&
+        e.item.grandparentRatingKey === current.grandparentRatingKey,
+    )
+    .map((e) => e.item)
+    .sort((a, b) => (a.parentIndex ?? 0) - (b.parentIndex ?? 0) || (a.index ?? 0) - (b.index ?? 0))
+  const idx = eps.findIndex((e) => e.ratingKey === current.ratingKey)
+  return idx >= 0 ? (eps[idx + 1] ?? null) : null
 }

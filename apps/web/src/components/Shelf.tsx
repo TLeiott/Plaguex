@@ -1,4 +1,5 @@
 import { useRef, type ReactNode } from 'react'
+import { Link, type LinkProps } from '@tanstack/react-router'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Item } from '@plaguex/plex-api'
 import { ItemCard, type CardShape } from './ItemCard'
@@ -11,10 +12,12 @@ interface Props {
   shape?: CardShape
   action?: ReactNode
   showContext?: boolean
+  /** Makes the title a link (e.g. to the full library listing). */
+  link?: Pick<LinkProps, 'to' | 'params' | 'search'>
 }
 
 /** Horizontal, scroll-snapping row of cards with keyboard-friendly paging buttons. */
-export function Shelf({ title, items, shape = 'poster', action, showContext }: Props) {
+export function Shelf({ title, items, shape = 'poster', action, showContext, link }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   if (items.length === 0) return null
   const page = (dir: 1 | -1) => {
@@ -25,7 +28,18 @@ export function Shelf({ title, items, shape = 'poster', action, showContext }: P
   return (
     <section className="group/shelf" aria-label={title} data-testid="shelf">
       <div className="mb-3 flex items-center justify-between safe-px">
-        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        {link ? (
+          <Link
+            {...link}
+            className="group/title inline-flex items-center gap-1 text-lg font-semibold tracking-tight hover:text-accent"
+            data-testid="shelf-title-link"
+          >
+            {title}
+            <ChevronRight className="size-5 opacity-60 transition-transform group-hover/title:translate-x-0.5" />
+          </Link>
+        ) : (
+          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        )}
         <div className="flex items-center gap-1">
           {action}
           <Button
