@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.activity.result.ActivityResult
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -18,6 +19,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import app.tauri.annotation.ActivityCallback
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
@@ -54,6 +56,15 @@ class NativeLoadArgs {
 class NativeControlArgs {
     var action: String = "pause"
     var value: Double? = null
+}
+
+@InvokeArg
+class ExternalPlayArgs {
+    var url: String = ""
+    var mime: String = "video/*"
+    var title: String = ""
+    var positionMs: Long = 0
+    var subtitleUrl: String? = null
 }
 
 @InvokeArg
@@ -180,6 +191,43 @@ class PlaguexPlugin(private val activity: Activity) : Plugin(activity) {
         } catch (e: Exception) {
             invoke.reject(e.message ?: "no player found")
         }
+    }
+
+    /**
+     * Hands playback to an installed player (VLC, MX Player, ...) and waits for it to finish.
+     * Extras follow VLC's public intent API ("title", "position" in ms, "subtitles_location"); MX
+     * Player shares "title"/"return_result". The result carries the end position when the player
+     * reports one (VLC: extra_position/extra_duration; MX: position/duration/end_by).
+     */
+    @Command
+    fun externalPlay(invoke: Invoke) {
+        val args = invoke.parseArgs(ExternalPlayArgs::class.java)
+        try {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(android.net.Uri.parse(args.url), args.mime)
+                putExtra("title", args.title)
+                putExtra("position", args.positionMs)
+                putExtra("return_result", true)
+                args.subtitleUrl?.let { putExtra("subtitles_location", it) }
+            }
+            startActivityForResult(invoke, Intent.createChooser(intent, "Play with"), "onExternalPlayerResult")
+        } catch (e: Exception) {
+            invoke.reject(e.message ?: "no player found")
+        }
+    }
+
+    @ActivityCallback
+    fun onExternalPlayerResult(invoke: Invoke, result: ActivityResult) {
+        val data = result.data
+        fun longExtra(key: String) = data?.getLongExtra(key, -1L)?.takeIf { it >= 0 }
+        fun intExtra(key: String) = data?.getIntExtra(key, -1)?.takeIf { it >= 0 }?.toLong()
+        invoke.resolve(
+            JSObject()
+                .put("resultCode", result.resultCode)
+                .put("positionMs", longExtra("extra_position") ?: intExtra("position") ?: -1L)
+                .put("durationMs", longExtra("extra_duration") ?: intExtra("duration") ?: -1L)
+                .put("completed", data?.getStringExtra("end_by") == "playback_completion")
+        )
     }
 
     @Command

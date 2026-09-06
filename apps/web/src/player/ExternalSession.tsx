@@ -9,17 +9,21 @@ import { formatClock } from '@/lib/format'
 import { buildExternalRequest } from './external'
 import { defaultTracks } from './plan'
 
+const playerName = () => (platform().kind === 'tauri-android' ? 'another app' : 'mpv')
+
 interface Props {
   item: Item
   startMs: number
   next: Item | null
+  /** Downloaded copy served by the loopback file server; replaces the server URL. */
+  localUrl?: string | undefined
 }
 
 /**
  * Hands playback to the native player (mpv). The webview shows a small status card while mpv owns
  * the screen, keeps Plex's timeline in sync from mpv's progress events, and returns when it exits.
  */
-export function ExternalSession({ item, startMs, next }: Props) {
+export function ExternalSession({ item, startMs, next, localUrl }: Props) {
   const navigate = useNavigate()
   const [state, setState] = useState<'starting' | 'playing' | 'error'>('starting')
   const [error, setError] = useState<string | null>(null)
@@ -65,7 +69,7 @@ export function ExternalSession({ item, startMs, next }: Props) {
         const nearEnd = durationMs > 0 && at * 1000 > durationMs * 0.9
         if (e.reason === 'error') {
           setState('error')
-          setError('mpv exited with an error')
+          setError(`${playerName()} exited with an error`)
           return
         }
         if (e.reason === 'eof' && nearEnd && next) {
@@ -85,18 +89,18 @@ export function ExternalSession({ item, startMs, next }: Props) {
     })
 
     const tracks = defaultTracks(item, 0)
-    void player
-      .play(buildExternalRequest({ item, mediaIndex: 0, startMs, ...tracks }), sessionId)
-      .catch((e: unknown) => {
-        setState('error')
-        setError(e instanceof Error ? e.message : String(e))
-      })
+    const req = buildExternalRequest({ item, mediaIndex: 0, startMs, ...tracks })
+    if (localUrl) Object.assign(req, { url: localUrl, subtitleFiles: [], httpHeaders: [] })
+    void player.play(req, sessionId).catch((e: unknown) => {
+      setState('error')
+      setError(e instanceof Error ? e.message : String(e))
+    })
 
     return () => {
       unsubscribe()
       if (!ended) void player.stop(sessionId)
     }
-  }, [item, startMs, next, navigate, sessionId])
+  }, [item, startMs, next, navigate, sessionId, localUrl])
 
   return (
     <div
@@ -114,9 +118,9 @@ export function ExternalSession({ item, startMs, next }: Props) {
         </h1>
         <p className="mt-1 text-white/70">
           {state === 'starting'
-            ? 'Starting mpv…'
+            ? `Starting ${playerName()}…`
             : state === 'playing'
-              ? `Playing in mpv · ${formatClock(pos.time)}${pos.paused ? ' (paused)' : ''}`
+              ? `Playing in ${playerName()} · ${formatClock(pos.time)}${pos.paused ? ' (paused)' : ''}`
               : error}
         </p>
       </div>

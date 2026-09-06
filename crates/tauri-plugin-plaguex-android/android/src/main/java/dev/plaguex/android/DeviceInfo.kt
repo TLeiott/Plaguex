@@ -68,8 +68,9 @@ object DeviceInfo {
                         video.supportedPerformancePoints?.take(4)?.joinToString(",") { "${it}" } ?: "-"
                     } else "-"
                     val instances = caps.maxSupportedInstances
+                    val profiles = caps.profileLevels.map { it.profile }.distinct().sorted().joinToString("/")
                     list.add(
-                        "${info.name} [$mime] hw=$hw instances=$instances achievable 1920x1080=${fmt(achievable1080)} 1920x800=${fmt(achievable800)} supported 1920x800=${fmt(supported800)} perf=$points",
+                        "${info.name} [$mime] hw=$hw instances=$instances profiles=$profiles achievable 1920x1080=${fmt(achievable1080)} 1920x800=${fmt(achievable800)} supported 1920x800=${fmt(supported800)} perf=$points",
                     )
                 } catch (_: Exception) {
                 }

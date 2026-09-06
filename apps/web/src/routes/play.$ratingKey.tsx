@@ -12,7 +12,12 @@ import { ErrorState, PageSpinner } from '@/components/ui'
 import { useDownloads } from '@/downloads/store'
 
 export const Route = createFileRoute('/play/$ratingKey')({
-  validateSearch: z.object({ restart: z.boolean().optional(), offline: z.boolean().optional() }),
+  validateSearch: z.object({
+    restart: z.boolean().optional(),
+    offline: z.boolean().optional(),
+    /** One-off: hand this title to the external player regardless of the setting. */
+    external: z.boolean().optional(),
+  }),
   beforeLoad: () => {
     const s = useSession.getState()
     if (!s.accountToken) throw redirect({ to: '/login' })
@@ -24,7 +29,7 @@ export const Route = createFileRoute('/play/$ratingKey')({
 
 function PlayPage() {
   const { ratingKey } = Route.useParams()
-  const { restart, offline } = Route.useSearch()
+  const { restart, offline, external } = Route.useSearch()
   // Offline: the downloaded entry carries the full item, so no request to the server is needed.
   const downloaded = useDownloads((s) => s.items[ratingKey])
   const itemQuery = useQuery({ ...q.item(ratingKey), enabled: !(offline && downloaded) })
@@ -43,12 +48,12 @@ function PlayPage() {
   const [useExternal, setUseExternal] = useState<boolean | null>(null)
   useEffect(() => {
     const ext = platform().externalPlayer
-    if (!externalPref || !ext || offline) {
+    if (!(externalPref || external) || !ext) {
       setUseExternal(false)
       return
     }
     void ext.available().then(setUseExternal, () => setUseExternal(false))
-  }, [externalPref, offline])
+  }, [externalPref, external])
   // undefined = still resolving the local file; null = play from the server
   const [localUrl, setLocalUrl] = useState<string | null | undefined>(offline ? undefined : null)
   useEffect(() => {
@@ -100,7 +105,13 @@ function PlayPage() {
   if (useExternal) {
     return (
       <div className="h-full w-full bg-black">
-        <ExternalSession key={ratingKey} item={item.data} startMs={startMs} next={next} />
+        <ExternalSession
+          key={ratingKey}
+          item={item.data}
+          startMs={startMs}
+          next={next}
+          localUrl={localUrl ?? undefined}
+        />
       </div>
     )
   }

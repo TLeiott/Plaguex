@@ -1,4 +1,5 @@
 import type { DownloadProgress, ExternalPlayerEvent, NativeVideoEvent, Platform } from './types'
+import { androidExternalPlayer } from './androidExternal'
 import { createWebPlatform } from './web'
 
 /**
@@ -57,29 +58,31 @@ export async function createTauriPlatform(): Promise<Platform> {
         ? (url, mime) => invoke('plugin:plaguex-android|open_video', { url, mime })
         : null,
     externalPlayer:
-      kind === 'tauri-linux'
-        ? {
-            available: () => invoke<boolean>('mpv_available'),
-            play: (req, sessionId) => invoke('mpv_play', { req, sessionId }),
-            stop: (sessionId) => invoke('mpv_stop', { sessionId: sessionId ?? null }),
-            pause: (paused) => invoke('mpv_pause', { paused }),
-            seek: (secs) => invoke('mpv_seek', { secs }),
-            subscribe: (cb) => {
-              let unlisten: (() => void) | null = null
-              void import('@tauri-apps/api/event').then(({ listen }) =>
-                listen<{ sessionId: string; event: Omit<ExternalPlayerEvent, 'sessionId'> }>(
-                  'mpv://event',
-                  (e) =>
-                    cb({
-                      sessionId: e.payload.sessionId,
-                      ...e.payload.event,
-                    } as ExternalPlayerEvent),
-                ).then((u) => (unlisten = u)),
-              )
-              return () => unlisten?.()
-            },
-          }
-        : null,
+      kind === 'tauri-android'
+        ? androidExternalPlayer((args) => invoke('plugin:plaguex-android|external_play', args))
+        : kind === 'tauri-linux'
+          ? {
+              available: () => invoke<boolean>('mpv_available'),
+              play: (req, sessionId) => invoke('mpv_play', { req, sessionId }),
+              stop: (sessionId) => invoke('mpv_stop', { sessionId: sessionId ?? null }),
+              pause: (paused) => invoke('mpv_pause', { paused }),
+              seek: (secs) => invoke('mpv_seek', { secs }),
+              subscribe: (cb) => {
+                let unlisten: (() => void) | null = null
+                void import('@tauri-apps/api/event').then(({ listen }) =>
+                  listen<{ sessionId: string; event: Omit<ExternalPlayerEvent, 'sessionId'> }>(
+                    'mpv://event',
+                    (e) =>
+                      cb({
+                        sessionId: e.payload.sessionId,
+                        ...e.payload.event,
+                      } as ExternalPlayerEvent),
+                  ).then((u) => (unlisten = u)),
+                )
+                return () => unlisten?.()
+              },
+            }
+          : null,
     downloads: {
       start: (req) => invoke('download_start', { req }),
       pause: (id) => invoke('download_pause', { id }),

@@ -3,4 +3,4 @@
 [default]
 description = "Allows the app to control screen orientation, system bar insets, immersive mode and the native video player."
 permissions = ["allow-set-orientation", "allow-set-immersive", "allow-set-fit-system-windows",
-  "allow-share-file", "allow-native-load", "allow-native-control", "allow-native-stop", "allow-device-info", "allow-open-video"]
+  "allow-share-file", "allow-native-load", "allow-native-control", "allow-native-stop", "allow-device-info", "allow-open-video", "allow-external-play"]

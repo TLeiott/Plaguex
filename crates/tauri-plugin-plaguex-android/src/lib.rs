@@ -275,6 +275,53 @@ fn open_video<R: Runtime>(app: AppHandle<R>, url: String, mime: String) -> Resul
     }
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExternalPlayArgs {
+    url: String,
+    mime: String,
+    title: String,
+    position_ms: u64,
+    subtitle_url: Option<String>,
+}
+
+/// Plays a URL in another installed app (VLC, MX Player, ...) and resolves with the position it
+/// reports when it returns: `{ resultCode, positionMs, durationMs, completed }`.
+#[tauri::command]
+async fn external_play<R: Runtime>(
+    app: AppHandle<R>,
+    url: String,
+    mime: String,
+    title: String,
+    position_ms: u64,
+    subtitle_url: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let args = ExternalPlayArgs {
+        url,
+        mime,
+        title,
+        position_ms,
+        subtitle_url,
+    };
+    #[cfg(target_os = "android")]
+    {
+        // The mobile call blocks until the other app returns, possibly hours later.
+        let handle = app.state::<Native<R>>().0.clone();
+        return tauri::async_runtime::spawn_blocking(move || {
+            handle
+                .run_mobile_plugin::<serde_json::Value>("externalPlay", args)
+                .map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, args);
+        Err("only available on Android".into())
+    }
+}
+
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("plaguex-android")
         .invoke_handler(tauri::generate_handler![
@@ -286,7 +333,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             native_control,
             native_stop,
             device_info,
-            open_video
+            open_video,
+            external_play
         ])
         .setup(|_app, _api| {
             #[cfg(target_os = "android")]

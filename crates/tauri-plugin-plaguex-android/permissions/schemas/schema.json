@@ -307,6 +307,18 @@
           "markdownDescription": "Denies the device_info command without any pre-configured scope."
         },
         {
+          "description": "Enables the external_play command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-external-play",
+          "markdownDescription": "Enables the external_play command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the external_play command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-external-play",
+          "markdownDescription": "Denies the external_play command without any pre-configured scope."
+        },
+        {
           "description": "Enables the native_control command without any pre-configured scope.",
           "type": "string",
           "const": "allow-native-control",
@@ -403,10 +415,10 @@
           "markdownDescription": "Denies the share_file command without any pre-configured scope."
         },
         {
-          "description": "Allows the app to control screen orientation, system bar insets, immersive mode and the native video player.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`\n- `allow-native-load`\n- `allow-native-control`\n- `allow-native-stop`\n- `allow-device-info`\n- `allow-open-video`",
+          "description": "Allows the app to control screen orientation, system bar insets, immersive mode and the native video player.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`\n- `allow-native-load`\n- `allow-native-control`\n- `allow-native-stop`\n- `allow-device-info`\n- `allow-open-video`\n- `allow-external-play`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Allows the app to control screen orientation, system bar insets, immersive mode and the native video player.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`\n- `allow-native-load`\n- `allow-native-control`\n- `allow-native-stop`\n- `allow-device-info`\n- `allow-open-video`"
+          "markdownDescription": "Allows the app to control screen orientation, system bar insets, immersive mode and the native video player.\n#### This default permission set includes:\n\n- `allow-set-orientation`\n- `allow-set-immersive`\n- `allow-set-fit-system-windows`\n- `allow-share-file`\n- `allow-native-load`\n- `allow-native-control`\n- `allow-native-stop`\n- `allow-device-info`\n- `allow-open-video`\n- `allow-external-play`"
         }
       ]
     }

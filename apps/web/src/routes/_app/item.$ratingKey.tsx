@@ -10,6 +10,8 @@ import { Badge, Button, buttonClass, ErrorState, PageSpinner, ProgressBar } from
 import { MediaInfo } from '@/components/MediaInfo'
 import { cx, episodeCode, formatDuration, progressFraction, resolutionLabel } from '@/lib/format'
 import { DownloadButton, DownloadSummaryBadge } from '@/components/DownloadButton'
+import { platform } from '@/platform'
+import { useSession } from '@/plex/session'
 
 export const Route = createFileRoute('/_app/item/$ratingKey')({
   loader: ({ context, params }) => context.queryClient.prefetchQuery(q.item(params.ratingKey)),
@@ -151,6 +153,7 @@ function VideoPage({ item }: { item: Item }) {
             ) : null}
             <WatchedButton item={item} />
             <DownloadButton item={item} />
+            <ExternalPlayLink ratingKey={item.ratingKey} />
           </div>
           {item.summary ? (
             <p className="max-w-3xl leading-relaxed text-fg">{item.summary}</p>
@@ -363,5 +366,22 @@ function SeasonPage({ season }: { season: Item }) {
         </ol>
       </div>
     </div>
+  )
+}
+
+/** One-off hand-off to the external player (VLC & co. on Android, mpv on Linux) when it is not the default. */
+function ExternalPlayLink({ ratingKey }: { ratingKey: string }) {
+  const isDefault = useSession((s) => s.settings.externalPlayer)
+  if (!platform().externalPlayer || isDefault) return null
+  return (
+    <Link
+      to="/play/$ratingKey"
+      params={{ ratingKey }}
+      search={{ external: true }}
+      className={buttonClass('secondary', 'lg')}
+      data-testid="play-external"
+    >
+      {platform().kind === 'tauri-android' ? 'Play in another app' : 'Play with mpv'}
+    </Link>
   )
 }

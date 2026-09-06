@@ -8,6 +8,7 @@ const COMMANDS: &[&str] = &[
     "native_stop",
     "device_info",
     "open_video",
+    "external_play",
 ];
 
 fn main() {

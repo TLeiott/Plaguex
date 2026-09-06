@@ -191,8 +191,12 @@ function SettingsPage() {
           {platform().externalPlayer ? (
             <Toggle
               id="externalPlayer"
-              label="Play with mpv"
-              description="Direct plays every file and renders all subtitle formats natively. Opens in its own window."
+              label={platform().kind === 'tauri-android' ? 'Play in another app' : 'Play with mpv'}
+              description={
+                platform().kind === 'tauri-android'
+                  ? 'Hands every title to an installed player such as VLC. Use it when a file stutters in the built-in player.'
+                  : 'Direct plays every file and renders all subtitle formats natively. Opens in its own window.'
+              }
               checked={settings.externalPlayer}
               onChange={(v) => updateSettings({ externalPlayer: v })}
             />

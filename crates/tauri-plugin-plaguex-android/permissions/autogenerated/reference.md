@@ -13,6 +13,7 @@ Allows the app to control screen orientation, system bar insets, immersive mode 
 - `allow-native-stop`
 - `allow-device-info`
 - `allow-open-video`
+- `allow-external-play`
 
 ## Permission Table
 
@@ -45,6 +46,32 @@ Enables the device_info command without any pre-configured scope.
 <td>
 
 Denies the device_info command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`plaguex-android:allow-external-play`
+
+</td>
+<td>
+
+Enables the external_play command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`plaguex-android:deny-external-play`
+
+</td>
+<td>
+
+Denies the external_play command without any pre-configured scope.
 
 </td>
 </tr>
