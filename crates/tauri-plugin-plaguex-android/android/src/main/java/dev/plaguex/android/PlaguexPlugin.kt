@@ -26,6 +26,7 @@ import app.tauri.annotation.TauriPlugin
 import androidx.media3.common.util.UnstableApi
 import app.tauri.plugin.Channel
 import app.tauri.plugin.Invoke
+import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 
 @InvokeArg
