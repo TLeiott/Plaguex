@@ -165,6 +165,29 @@ function SettingsPage() {
               onChange={(v) => updateSettings({ nativePlayer: v })}
             />
           ) : null}
+          {platform().nativeVideo && settings.nativePlayer ? (
+            <label className="flex items-center justify-between gap-4 py-3">
+              <span>
+                <span className="block font-medium">Video decoder</span>
+                <span className="block text-sm text-fg-3">
+                  Try the CPU decoder if a file stutters with the hardware one.
+                </span>
+              </span>
+              <select
+                value={settings.videoDecoder ?? 'hardware'}
+                onChange={(e) =>
+                  updateSettings({
+                    videoDecoder: e.target.value === 'software' ? 'software' : 'hardware',
+                  })
+                }
+                className="h-9 max-w-[50%] rounded-lg border border-line bg-bg-3 px-2 text-sm"
+                data-testid="setting-video-decoder"
+              >
+                <option value="hardware">Hardware (default)</option>
+                <option value="software">Software (CPU)</option>
+              </select>
+            </label>
+          ) : null}
           {platform().externalPlayer ? (
             <Toggle
               id="externalPlayer"

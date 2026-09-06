@@ -67,6 +67,8 @@ export interface NativePlayRequest {
   subtitleFiles: { url: string; mime: string; language: string; label: string }[]
   /** Diagnostics only: no audio track, so the video renderer runs on the standalone clock. */
   disableAudio?: boolean
+  /** Prefer this MediaCodec decoder name, or "software" for the CPU decoders. Unset = default. */
+  decoder?: string
 }
 
 export type NativeVideoEvent =

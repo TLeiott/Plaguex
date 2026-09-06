@@ -272,6 +272,27 @@ export async function probePlayback(
   return probe
 }
 
+const CODEC_MIME: Record<string, string> = {
+  hevc: 'video/hevc',
+  h264: 'video/avc',
+  av1: 'video/av01',
+}
+
+/** Decoder names from the device-state report for `codec`, minus the one already measured. */
+export function alternativeDecoders(
+  device: Record<string, unknown> | null,
+  codec: string | undefined,
+  used: string | undefined,
+): string[] {
+  const mime = CODEC_MIME[codec ?? '']
+  const list = device?.decoders
+  if (!mime || !Array.isArray(list)) return []
+  return list
+    .map((line) => /^(\S+) \[([^\]]+)\]/.exec(String(line)))
+    .filter((m): m is RegExpExecArray => m !== null && m[2] === mime && m[1] !== used)
+    .map((m) => m[1]!)
+}
+
 /**
  * Same measurement for the native surface (ExoPlayer): the picture is composited by the OS, so
  * frame pacing comes from the decoder counters instead of requestVideoFrameCallback.
@@ -282,7 +303,7 @@ export async function probeNative(
   plan: PlaybackPlan,
   seconds: number,
   onProgress?: Progress,
-  opts: { disableAudio?: boolean } = {},
+  opts: { disableAudio?: boolean; decoder?: string } = {},
 ): Promise<PlaybackProbe> {
   const backend = platform().nativeVideo
   const native = platform().screen
@@ -348,6 +369,7 @@ export async function probeNative(
     await el.load({
       ...buildNativeRequest({ plan, tracks: {}, startSecs: 0, title: label }),
       ...(opts.disableAudio ? { disableAudio: true } : {}),
+      ...(opts.decoder ? { decoder: opts.decoder } : {}),
     })
     // rVFC does not exist for a native surface; keep the rAF jank counter only.
     pacing = observePacing(document.createElement('video'))
@@ -377,7 +399,7 @@ export async function probeNative(
       probe.worstLongFrameMs = p.worstLongFrameMs
     }
     const st = el.stats
-    probe.extra = `native: skipped ${st.skippedFrames} · max consecutive dropped ${st.maxConsecutiveDropped} · avg frame offset ${st.frameOffsetMs.toFixed(1)} ms (negative = decoder late) · display ${st.displayHz.toFixed(0)} Hz${opts.disableAudio ? ' · audio disabled' : ''}`
+    probe.extra = `native: skipped ${st.skippedFrames} · max consecutive dropped ${st.maxConsecutiveDropped} · avg frame offset ${st.frameOffsetMs.toFixed(1)} ms (negative = decoder late) · display ${st.displayHz.toFixed(0)} Hz${opts.disableAudio ? ' · audio disabled' : ''}${opts.decoder ? ` · requested decoder ${opts.decoder}` : ''}`
     await el.unload().catch(() => undefined)
     host.remove()
     document.documentElement.classList.remove('plaguex-native-video')
@@ -541,6 +563,12 @@ export async function runBenchmark(
     }),
   )
 
+  let nativeDevice: Record<string, unknown> | null = null
+  if (p.deviceInfo) {
+    onProgress('Reading device state')
+    nativeDevice = await p.deviceInfo().catch(() => null)
+  }
+
   // Playback probes
   if (localUrl) {
     onProgress('Playing a downloaded file')
@@ -593,6 +621,22 @@ export async function runBenchmark(
           { disableAudio: true },
         ),
       )
+      // Every other decoder the device has for this codec: finds one that keeps up when the
+      // default one drops frames (as the Qualcomm HEVC decoder did on a plain x265 file).
+      const used = /via (\S+)/.exec(playback.at(-2)?.decoded ?? '')?.[1]
+      for (const name of alternativeDecoders(nativeDevice, media.videoCodec, used)) {
+        onProgress(`Playing the downloaded file via ${name}`)
+        playback.push(
+          await probeNative(
+            `Native downloaded via ${name}: ${first.item.title}`,
+            'local file · ExoPlayer',
+            { ...localPlan, sessionId: newSessionId() },
+            playbackSeconds,
+            onProgress,
+            { decoder: name },
+          ),
+        )
+      }
     }
   }
   if (firstItem && caps) {
@@ -684,12 +728,6 @@ export async function runBenchmark(
         error: e instanceof Error ? e.message : String(e),
       })
     }
-  }
-
-  let nativeDevice: Record<string, unknown> | null = null
-  if (p.deviceInfo) {
-    onProgress('Reading device state')
-    nativeDevice = await p.deviceInfo().catch(() => null)
   }
 
   return {

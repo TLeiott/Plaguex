@@ -25,6 +25,7 @@ import androidx.media3.exoplayer.DecoderCounters
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.SubtitleView
 import app.tauri.annotation.InvokeArg
@@ -53,6 +54,7 @@ class NativePlayRequestArg {
     var embeddedSubtitleCount: Int = 0
     var subtitleFiles: List<SubtitleFileArg> = emptyList()
     var disableAudio: Boolean = false
+    var decoder: String? = null
 }
 
 /**
@@ -93,7 +95,9 @@ class NativePlayer(private val activity: Activity, private val webView: WebView)
             .setAllowCrossProtocolRedirects(true)
             .setDefaultRequestProperties(req.httpHeaders)
         val dataSource = DefaultDataSource.Factory(activity, http)
-        val renderers = DefaultRenderersFactory(activity).setEnableDecoderFallback(true)
+        val renderers = DefaultRenderersFactory(activity)
+            .setEnableDecoderFallback(true)
+            .setMediaCodecSelector(codecSelector(req.decoder))
         val exo = ExoPlayer.Builder(activity, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSource))
             .setAudioAttributes(
@@ -216,6 +220,18 @@ class NativePlayer(private val activity: Activity, private val webView: WebView)
         pendingAudio = null
         pendingSubtitle = null
         exo.trackSelectionParameters = params.build()
+    }
+
+    /**
+     * Default decoder order, except the requested one (by name, or any software decoder for
+     * "software") is tried first. Video only; audio keeps the platform's choice.
+     */
+    private fun codecSelector(preferred: String?) = MediaCodecSelector { mime, secure, tunneling ->
+        val all = MediaCodecSelector.DEFAULT.getDecoderInfos(mime, secure, tunneling)
+        if (preferred.isNullOrEmpty() || !MimeTypes.isVideo(mime)) all
+        else all.sortedByDescending {
+            if (preferred == "software") !it.hardwareAccelerated else it.name == preferred
+        }
     }
 
     private fun isSidecar(group: Tracks.Group) =

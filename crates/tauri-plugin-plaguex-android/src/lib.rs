@@ -170,6 +170,9 @@ pub struct NativePlayRequest {
     /// Diagnostics: play video only, so the renderer runs on the standalone clock.
     #[serde(default)]
     pub disable_audio: bool,
+    /// Preferred MediaCodec decoder name, or "software" for the CPU decoders.
+    #[serde(default)]
+    pub decoder: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

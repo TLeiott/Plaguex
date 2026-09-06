@@ -29,6 +29,8 @@ export interface Settings {
   externalPlayer: boolean
   /** In-app native video surface (ExoPlayer on Android) instead of the webview's <video>. */
   nativePlayer: boolean
+  /** Native player video decoder: the platform's hardware default, or the CPU (software) decoders. */
+  videoDecoder: 'hardware' | 'software'
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -39,6 +41,7 @@ export const DEFAULT_SETTINGS: Settings = {
   subtitlesOnByDefault: false,
   externalPlayer: false,
   nativePlayer: true,
+  videoDecoder: 'hardware',
 }
 
 interface SessionState {

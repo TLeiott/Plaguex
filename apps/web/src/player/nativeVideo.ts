@@ -193,7 +193,7 @@ export function buildNativeRequest(o: {
   startSecs: number
   title: string
 }): NativePlayRequest {
-  const { activeServer, clientIdentifier } = useSession.getState()
+  const { activeServer, clientIdentifier, settings } = useSession.getState()
   const part = o.plan.part
   const sidecar = o.plan.sidecarSubtitle
   const req: NativePlayRequest = {
@@ -216,6 +216,7 @@ export function buildNativeRequest(o: {
         ]
       : [],
     embeddedSubtitleCount: part.streams.filter((s) => s.kind === 'subtitle' && !s.external).length,
+    ...(settings.videoDecoder === 'software' ? { decoder: 'software' } : {}),
   }
   if (o.tracks.audioStreamId) {
     const a = trackOrdinal(part, o.tracks.audioStreamId)
