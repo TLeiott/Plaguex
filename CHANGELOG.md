@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.1.0 — 2026-09-06
+
+The stutter release. Investigated frame drops reported on a Galaxy S23 Ultra down to the Qualcomm
+HEVC decoder path and shipped a way around it.
+
+### Player
+
+- **Play in another app** (Android): hand any title, streamed or downloaded, to an installed player
+  such as VLC or MX Player with the resume position, title and external subtitles. The end position
+  comes back to Plaguex and is pushed to Plex, so resume and next-episode autoplay keep working.
+  This is the default on Android; **Play in app** stays one tap away on every item and download.
+- Native ExoPlayer surface on Android (SurfaceView under a transparent WebView): direct plays
+  everything, renders embedded and image subtitles natively, no server burn-in.
+- Video decoder setting for the native surface (hardware default or software), for files a hardware
+  decoder mishandles.
+- The `Play with mpv` / `Play in another app` setting is now a platform-aware default
+  (`settings.player`); an explicit choice always wins.
+
+### Diagnostics
+
+- Playback probes run full-screen so the compositor is part of the measurement, and report frame
+  pacing (presented frames, median gap, hitches, main-thread jank).
+- Native-player probes with decoder counters (dropped, skipped, longest drop streak, frame
+  lateness), a video-only run, a run per alternative decoder and a cross-codec comparison title.
+- Device state section: thermal status and headroom, power-save mode, battery, display modes and
+  refresh rate, HDR types and what every hardware decoder claims it can sustain at 1080p.
+- "Open in another player" A/B button on the Diagnostics page.
+
+### Fixes
+
+- Release APKs keep reflection-filled argument classes under R8.
+- Clippy passes on non-Android targets for the Android plugin crate.
+
+### Known limitations
+
+- Some HEVC 10-bit files drop ~30% of frames in every in-app renderer on Qualcomm devices while
+  VLC plays them smoothly; hence the external-player default on Android.
+- Embedded subtitles still require a server burn-in in the web player.
+
 ## 1.0.0 — 2026-09-05
 
 First release. Built and verified in a single day against a live Plex Media Server (1.43) and a
