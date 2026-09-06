@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { DOWNLOAD_PRESETS, type PlayerCapabilities } from '@plaguex/plex-api'
-import { useSession, type Settings } from '@/plex/session'
+import { externalByDefault, useSession, type Settings } from '@/plex/session'
 import { plexTv } from '@/plex/api'
 import { Button, buttonClass } from '@/components/ui'
 import { platform } from '@/platform'
@@ -190,15 +190,15 @@ function SettingsPage() {
           ) : null}
           {platform().externalPlayer ? (
             <Toggle
-              id="externalPlayer"
+              id="player"
               label={platform().kind === 'tauri-android' ? 'Play in another app' : 'Play with mpv'}
               description={
                 platform().kind === 'tauri-android'
-                  ? 'Hands every title to an installed player such as VLC. Use it when a file stutters in the built-in player.'
+                  ? 'Hands every title to an installed player such as VLC. Turn off to use the built-in player; either one stays a tap away on each title.'
                   : 'Direct plays every file and renders all subtitle formats natively. Opens in its own window.'
               }
-              checked={settings.externalPlayer}
-              onChange={(v) => updateSettings({ externalPlayer: v })}
+              checked={externalByDefault(settings)}
+              onChange={(v) => updateSettings({ player: v ? 'external' : 'app' })}
             />
           ) : null}
           <Toggle

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import type { Item, PlayerCapabilities } from '@plaguex/plex-api'
 import { q } from '@/plex/queries'
-import { useSession } from '@/plex/session'
+import { externalByDefault, useSession } from '@/plex/session'
 import { platform } from '@/platform'
 import { Player, useNextEpisode } from '@/player/Player'
 import { ExternalSession } from '@/player/ExternalSession'
@@ -44,11 +44,11 @@ function PlayPage() {
         }
       : itemQuery
   const [caps, setCaps] = useState<PlayerCapabilities | null>(null)
-  const externalPref = useSession((s) => s.settings.externalPlayer)
+  const externalPref = useSession((s) => externalByDefault(s.settings))
   const [useExternal, setUseExternal] = useState<boolean | null>(null)
   useEffect(() => {
     const ext = platform().externalPlayer
-    if (!(externalPref || external) || !ext) {
+    if (!(external ?? externalPref) || !ext) {
       setUseExternal(false)
       return
     }

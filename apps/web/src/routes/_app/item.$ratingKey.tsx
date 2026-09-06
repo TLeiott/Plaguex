@@ -11,7 +11,7 @@ import { MediaInfo } from '@/components/MediaInfo'
 import { cx, episodeCode, formatDuration, progressFraction, resolutionLabel } from '@/lib/format'
 import { DownloadButton, DownloadSummaryBadge } from '@/components/DownloadButton'
 import { platform } from '@/platform'
-import { useSession } from '@/plex/session'
+import { externalByDefault, useSession } from '@/plex/session'
 
 export const Route = createFileRoute('/_app/item/$ratingKey')({
   loader: ({ context, params }) => context.queryClient.prefetchQuery(q.item(params.ratingKey)),
@@ -369,19 +369,23 @@ function SeasonPage({ season }: { season: Item }) {
   )
 }
 
-/** One-off hand-off to the external player (VLC & co. on Android, mpv on Linux) when it is not the default. */
+/** One-off switch to whichever player is not the default: another app (mpv on Linux) or the built-in one. */
 function ExternalPlayLink({ ratingKey }: { ratingKey: string }) {
-  const isDefault = useSession((s) => s.settings.externalPlayer)
-  if (!platform().externalPlayer || isDefault) return null
+  const externalDefault = useSession((s) => externalByDefault(s.settings))
+  if (!platform().externalPlayer) return null
   return (
     <Link
       to="/play/$ratingKey"
       params={{ ratingKey }}
-      search={{ external: true }}
+      search={{ external: !externalDefault }}
       className={buttonClass('secondary', 'lg')}
-      data-testid="play-external"
+      data-testid={externalDefault ? 'play-in-app' : 'play-external'}
     >
-      {platform().kind === 'tauri-android' ? 'Play in another app' : 'Play with mpv'}
+      {externalDefault
+        ? 'Play in app'
+        : platform().kind === 'tauri-android'
+          ? 'Play in another app'
+          : 'Play with mpv'}
     </Link>
   )
 }

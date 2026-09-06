@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist, type StateStorage, createJSONStorage } from 'zustand/middleware'
 import type { PlexUser, ServerResource } from '@plaguex/plex-api'
-import { getPlatform } from '@/platform'
+import { getPlatform, platform } from '@/platform'
 import { newClientIdentifier } from './client-info'
 
 export interface ActiveServer {
@@ -25,8 +25,8 @@ export interface Settings {
   preferredAudioLanguage?: string
   preferredSubtitleLanguage?: string
   subtitlesOnByDefault: boolean
-  /** Prefer an external native player (mpv on Linux) when available. */
-  externalPlayer: boolean
+  /** Which player opens a title. Unset = platform default (see externalByDefault). */
+  player?: 'app' | 'external'
   /** In-app native video surface (ExoPlayer on Android) instead of the webview's <video>. */
   nativePlayer: boolean
   /** Native player video decoder: the platform's hardware default, or the CPU (software) decoders. */
@@ -39,9 +39,20 @@ export const DEFAULT_SETTINGS: Settings = {
   autoSkipCredits: false,
   autoPlayNext: true,
   subtitlesOnByDefault: false,
-  externalPlayer: false,
   nativePlayer: true,
   videoDecoder: 'hardware',
+}
+
+/**
+ * External player (VLC & co.) is the default on Android because the Qualcomm HEVC path stutters in
+ * every in-app renderer; mpv stays opt-in on Linux. An explicit choice always wins.
+ */
+export function externalByDefault(settings: Settings): boolean {
+  if (settings.player) return settings.player === 'external'
+  // Setting from before the platform default existed.
+  if ((settings as { externalPlayer?: boolean }).externalPlayer) return true
+  const p = platform()
+  return p.kind === 'tauri-android' && p.externalPlayer !== null
 }
 
 interface SessionState {
