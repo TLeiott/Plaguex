@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useMemo } from 'react'
-import { Pause, Play, Trash2, Download, ChevronDown } from 'lucide-react'
+import { Pause, Play, Trash2, Download, ChevronDown, ExternalLink } from 'lucide-react'
 import { useDownloads, wireDownloadEvents, type DownloadEntry } from '@/downloads/store'
 import { groupDownloads } from '@/downloads/group'
 import { Button, EmptyState, ProgressBar } from '@/components/ui'
 import { cardTitle } from '@/components/ItemCard'
 import { episodeCode, formatBytes } from '@/lib/format'
-import { isTauri } from '@/platform'
+import { isTauri, platform } from '@/platform'
 
 export const Route = createFileRoute('/_app/downloads')({ component: DownloadsPage })
 
@@ -141,15 +141,30 @@ function Row({
         {d.error ? <p className="mt-1 text-xs text-danger">{d.error}</p> : null}
       </div>
       {d.status === 'done' ? (
-        <Link
-          to="/play/$ratingKey"
-          params={{ ratingKey: d.item.ratingKey }}
-          search={{ offline: true }}
-          className="rounded-lg bg-accent p-2 text-accent-fg"
-          aria-label="Play offline"
-        >
-          <Play className="size-5 fill-current" />
-        </Link>
+        <>
+          {platform().externalPlayer ? (
+            <Link
+              to="/play/$ratingKey"
+              params={{ ratingKey: d.item.ratingKey }}
+              search={{ offline: true, external: true }}
+              className="rounded-lg p-2 text-fg-2 hover:bg-bg-3 hover:text-fg"
+              aria-label="Play in another app"
+              title="Play in another app"
+              data-testid="play-external"
+            >
+              <ExternalLink className="size-5" />
+            </Link>
+          ) : null}
+          <Link
+            to="/play/$ratingKey"
+            params={{ ratingKey: d.item.ratingKey }}
+            search={{ offline: true }}
+            className="rounded-lg bg-accent p-2 text-accent-fg"
+            aria-label="Play offline"
+          >
+            <Play className="size-5 fill-current" />
+          </Link>
+        </>
       ) : d.status === 'paused' || d.status === 'error' ? (
         <Button size="icon" variant="ghost" aria-label="Resume" onClick={() => void resume(d.id)}>
           <Play className="size-5" />
